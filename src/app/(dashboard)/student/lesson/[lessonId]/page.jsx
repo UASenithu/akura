@@ -5,21 +5,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
-import { ArrowLeft, CheckCircle, Circle, Sparkles, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
-import { awardPoints } from '@/app/actions/gamification'
-import toast, { Toaster } from 'react-hot-toast'
+import { ArrowLeft, CheckCircle, Circle, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function LessonViewPage({ params }) {
+  const router = useRouter()
   const unwrappedParams = use(params)
   const lessonId = unwrappedParams.lessonId
-  
-  // Rest of your code...
-}
-
-export default function LessonViewPage() {
-  const params = useParams()
-  const router = useRouter()
-  const lessonId = params.lessonId
   
   const [lesson, setLesson] = useState(null)
   const [subject, setSubject] = useState(null)
@@ -28,48 +19,64 @@ export default function LessonViewPage() {
   const [isCompleted, setIsCompleted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     async function fetchData() {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser()
+        setUser(user)
 
-      // Get lesson
-      const { data: lessonData } = await supabase
-        .from('lessons')
-        .select('*, subjects(*)')
-        .eq('id', lessonId)
-        .single()
-      setLesson(lessonData)
-      setSubject(lessonData?.subjects)
-
-      // Get all lessons for this subject (for navigation)
-      if (lessonData) {
-        const { data: lessonsData } = await supabase
+        // Get lesson
+        const { data: lessonData, error: lessonError } = await supabase
           .from('lessons')
-          .select('id, title')
-          .eq('subject_id', lessonData.subject_id)
-          .order('order_num', { ascending: true })
-        
-        setAllLessons(lessonsData || [])
-        const index = lessonsData?.findIndex(l => l.id === lessonId) || 0
-        setCurrentIndex(index >= 0 ? index : 0)
-      }
-
-      // Check if completed
-      if (user) {
-        const { data: progressData } = await supabase
-          .from('user_progress')
-          .select('completed')
-          .eq('user_id', user.id)
-          .eq('lesson_id', lessonId)
+          .select('*, subjects(*)')
+          .eq('id', lessonId)
           .single()
+
+        if (lessonError) {
+          console.error('Error fetching lesson:', lessonError)
+          setError('Lesson not found')
+          setLoading(false)
+          return
+        }
         
-        setIsCompleted(progressData?.completed || false)
+        setLesson(lessonData)
+        setSubject(lessonData?.subjects)
+
+        // Get all lessons for this subject
+        if (lessonData) {
+          const { data: lessonsData, error: lessonsError } = await supabase
+            .from('lessons')
+            .select('id, title')
+            .eq('subject_id', lessonData.subject_id)
+            .order('order_num', { ascending: true })
+          
+          if (!lessonsError) {
+            setAllLessons(lessonsData || [])
+            const index = lessonsData?.findIndex(l => l.id === lessonId) || 0
+            setCurrentIndex(index >= 0 ? index : 0)
+          }
+        }
+
+        // Check if completed
+        if (user) {
+          const { data: progressData } = await supabase
+            .from('user_progress')
+            .select('completed')
+            .eq('user_id', user.id)
+            .eq('lesson_id', lessonId)
+            .single()
+          
+          setIsCompleted(progressData?.completed || false)
+        }
+      } catch (err) {
+        console.error('Error:', err)
+        setError('Something went wrong')
+      } finally {
+        setLoading(false)
       }
-      
-      setLoading(false)
     }
     fetchData()
   }, [lessonId])
@@ -77,23 +84,27 @@ export default function LessonViewPage() {
   async function toggleComplete() {
     if (!user) return
 
-    if (isCompleted) {
-      await supabase
-        .from('user_progress')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('lesson_id', lessonId)
-      setIsCompleted(false)
-    } else {
-      await supabase
-        .from('user_progress')
-        .insert({
-          user_id: user.id,
-          lesson_id: lessonId,
-          completed: true,
-          completed_at: new Date().toISOString()
-        })
-      setIsCompleted(true)
+    try {
+      if (isCompleted) {
+        await supabase
+          .from('user_progress')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('lesson_id', lessonId)
+        setIsCompleted(false)
+      } else {
+        await supabase
+          .from('user_progress')
+          .insert({
+            user_id: user.id,
+            lesson_id: lessonId,
+            completed: true,
+            completed_at: new Date().toISOString()
+          })
+        setIsCompleted(true)
+      }
+    } catch (err) {
+      console.error('Error toggling lesson:', err)
     }
   }
 
@@ -125,12 +136,12 @@ export default function LessonViewPage() {
     )
   }
 
-  if (!lesson) {
+  if (error || !lesson) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <div className="text-center">
           <div className="text-6xl mb-4">🔍</div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Lesson Not Found</h2>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{error || 'Lesson Not Found'}</h2>
           <Link href="/student" className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 hover:underline">
             Back to Dashboard
           </Link>
@@ -146,9 +157,9 @@ export default function LessonViewPage() {
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Link href={`/student/lessons/${subject?.id}`} className="p-2 hover:bg-white/20 rounded-xl transition">
+            <button onClick={() => router.back()} className="p-2 hover:bg-white/20 rounded-xl transition">
               <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-            </Link>
+            </button>
             <div>
               <h1 className="text-lg font-bold text-slate-800 dark:text-white truncate max-w-[200px]">
                 {lesson.title}
@@ -159,8 +170,6 @@ export default function LessonViewPage() {
               </p>
             </div>
           </div>
-
-          
           
           <button
             onClick={toggleComplete}
