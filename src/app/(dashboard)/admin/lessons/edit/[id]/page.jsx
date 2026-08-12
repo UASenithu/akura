@@ -18,15 +18,33 @@ export default function EditLessonPage({ params }) {
 
   useEffect(() => {
     async function fetchData() {
-      const { lesson } = await getLesson(params.id)
-      const { subjects: subjectsData } = await getSubjects()
-      const { modules: modulesData } = await getModules()
-      
-      setLesson(lesson)
-      setContent(lesson?.story_content || '')
-      setSubjects(subjectsData || [])
-      setModules(modulesData || [])
-      setLoading(false)
+      try {
+        // Get lesson
+        const { lesson: lessonData, error: lessonError } = await getLesson(params.id)
+        
+        if (lessonError || !lessonData) {
+          setError('Lesson not found')
+          setLoading(false)
+          return
+        }
+        
+        setLesson(lessonData)
+        setContent(lessonData?.story_content || '')
+
+        // Get subjects
+        const { subjects: subjectsData } = await getSubjects()
+        setSubjects(subjectsData || [])
+
+        // Get modules
+        const { modules: modulesData } = await getModules()
+        setModules(modulesData || [])
+        
+        setLoading(false)
+      } catch (err) {
+        console.error('Error fetching data:', err)
+        setError('Failed to load lesson')
+        setLoading(false)
+      }
     }
     fetchData()
   }, [params.id])
@@ -37,9 +55,15 @@ export default function EditLessonPage({ params }) {
     formData.append('id', params.id)
     formData.append('content', content)
     
-    const result = await updateLesson(formData)
-    if (result?.error) {
-      setError(result.error)
+    try {
+      const result = await updateLesson(formData)
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        router.push('/admin')
+      }
+    } catch (err) {
+      setError('Failed to update lesson')
     }
   }
 
@@ -54,11 +78,12 @@ export default function EditLessonPage({ params }) {
     )
   }
 
-  if (!lesson) {
+  if (error || !lesson) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-xl text-red-600 dark:text-red-400">Lesson not found</p>
+          <div className="text-6xl mb-4">🔍</div>
+          <p className="text-xl text-red-600 dark:text-red-400">{error || 'Lesson not found'}</p>
           <Link href="/admin" className="text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block">
             Back to Dashboard
           </Link>
@@ -104,13 +129,13 @@ export default function EditLessonPage({ params }) {
               <select
                 name="subjectId"
                 required
-                defaultValue={lesson.subject_id}
+                defaultValue={lesson.subject_id || ''}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               >
                 <option value="">Select Subject</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
-                    {subject.name} ({subject.streams?.name})
+                    {subject.name} ({subject.streams?.name || 'No stream'})
                   </option>
                 ))}
               </select>

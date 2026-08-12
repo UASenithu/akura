@@ -33,21 +33,29 @@ export default function AdminDashboard() {
       setSubjects(subjects || [])
 
      
-      // Get student count - FIXED
-      const { count, error: countError } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'student')
+              
+              // Get student count - FIXED with better error handling
+        let studentCount = 0
+        try {
+          const { count, error: countError } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'student')
+          
+          if (!countError) {
+            studentCount = count || 0
+          } else {
+            console.error('Error counting students:', countError)
+          }
+        } catch (err) {
+          console.error('Error in student count:', err)
+        }
 
-      if (countError) {
-        console.error('Error counting students:', countError)
-      }
-
-      setStats({
-        totalLessons: lessons?.length || 0,
-        totalSubjects: subjects?.length || 0,
-        totalStudents: count || 0
-      })
+        setStats({
+          totalLessons: lessons?.length || 0,
+          totalSubjects: subjects?.length || 0,
+          totalStudents: studentCount
+        })
 
       setLoading(false)
     }
