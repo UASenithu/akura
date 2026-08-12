@@ -98,7 +98,7 @@ export default function SubjectsPage({ params }) {
                 whileHover={{ y: -8, scale: 1.02 }}
                 className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-2xl transition-all duration-300"
               >
-                <Link href={`/student/lessons?subjectId=${subject.id}`} className="block p-6 relative">
+                    <Link href={`/student/${streamId}/${subject.id}`} className="block p-6 relative">
                   <div className="text-5xl mb-4 float group-hover:scale-110 transition-transform duration-300">
                     {subject.icon || '📖'}
                   </div>

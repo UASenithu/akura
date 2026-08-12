@@ -1,16 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useEffect, useState, use } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
 import { ArrowLeft, CheckCircle, Circle, Sparkles } from 'lucide-react'
 
-export default function LessonsPage() {
+export default function LessonsPage({ params }) {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const subjectId = searchParams.get('subjectId')
+  const { streamId, subjectId } = use(params)
   
   const [subject, setSubject] = useState(null)
   const [lessons, setLessons] = useState([])
@@ -22,11 +21,6 @@ export default function LessonsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        if (!subjectId) {
-          router.push('/student')
-          return
-        }
-
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
 
@@ -74,7 +68,7 @@ export default function LessonsPage() {
       }
     }
     fetchData()
-  }, [subjectId, router])
+  }, [subjectId])
 
   async function toggleLessonComplete(lessonId, isCompleted) {
     if (!user) return
