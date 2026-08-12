@@ -1,16 +1,16 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
 import { ArrowLeft, CheckCircle, Circle, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default function LessonViewPage({ params }) {
+export default function LessonViewPage() {
   const router = useRouter()
-  const unwrappedParams = use(params)
-  const lessonId = unwrappedParams.lessonId
+  const searchParams = useSearchParams()
+  const lessonId = searchParams.get('lessonId')
   
   const [lesson, setLesson] = useState(null)
   const [subject, setSubject] = useState(null)
@@ -24,6 +24,11 @@ export default function LessonViewPage({ params }) {
   useEffect(() => {
     async function fetchData() {
       try {
+        if (!lessonId) {
+          router.push('/student')
+          return
+        }
+
         // Get current user
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
@@ -79,7 +84,7 @@ export default function LessonViewPage({ params }) {
       }
     }
     fetchData()
-  }, [lessonId])
+  }, [lessonId, router])
 
   async function toggleComplete() {
     if (!user) return
@@ -111,14 +116,14 @@ export default function LessonViewPage({ params }) {
   function goToPrevLesson() {
     if (currentIndex > 0) {
       const prevLesson = allLessons[currentIndex - 1]
-      router.push(`/student/lesson/${prevLesson.id}`)
+      router.push(`/student/lesson?lessonId=${prevLesson.id}`)
     }
   }
 
   function goToNextLesson() {
     if (currentIndex < allLessons.length - 1) {
       const nextLesson = allLessons[currentIndex + 1]
-      router.push(`/student/lesson/${nextLesson.id}`)
+      router.push(`/student/lesson?lessonId=${nextLesson.id}`)
     }
   }
 
