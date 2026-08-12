@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getLesson, updateLesson, getSubjects, getModules } from '@/app/actions/lessons'
@@ -8,6 +8,10 @@ import RichTextEditor from '@/components/RichTextEditor'
 import { ArrowLeft } from 'lucide-react'
 
 export default function EditLessonPage({ params }) {
+  // UNWRAP params - Next.js 16 requires this!
+  const unwrappedParams = use(params)
+  const lessonId = unwrappedParams.id
+  
   const router = useRouter()
   const [subjects, setSubjects] = useState([])
   const [modules, setModules] = useState([])
@@ -19,25 +23,28 @@ export default function EditLessonPage({ params }) {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Get lesson
-        const { lesson: lessonData, error: lessonError } = await getLesson(params.id)
+        console.log('Loading lesson ID:', lessonId)
         
-        if (lessonError || !lessonData) {
-          setError('Lesson not found')
+        // Get lesson
+        const result = await getLesson(lessonId)
+        console.log('GetLesson result:', result)
+        
+        if (result.error || !result.lesson) {
+          setError(result.error || 'Lesson not found')
           setLoading(false)
           return
         }
         
-        setLesson(lessonData)
-        setContent(lessonData?.story_content || '')
+        setLesson(result.lesson)
+        setContent(result.lesson?.story_content || '')
 
         // Get subjects
-        const { subjects: subjectsData } = await getSubjects()
-        setSubjects(subjectsData || [])
+        const subjectsResult = await getSubjects()
+        setSubjects(subjectsResult.subjects || [])
 
         // Get modules
-        const { modules: modulesData } = await getModules()
-        setModules(modulesData || [])
+        const modulesResult = await getModules()
+        setModules(modulesResult.modules || [])
         
         setLoading(false)
       } catch (err) {
@@ -47,12 +54,12 @@ export default function EditLessonPage({ params }) {
       }
     }
     fetchData()
-  }, [params.id])
+  }, [lessonId])
 
   async function handleSubmit(event) {
     event.preventDefault()
     const formData = new FormData(event.target)
-    formData.append('id', params.id)
+    formData.append('id', lessonId)
     formData.append('content', content)
     
     try {
@@ -63,6 +70,7 @@ export default function EditLessonPage({ params }) {
         router.push('/admin')
       }
     } catch (err) {
+      console.error('Submit error:', err)
       setError('Failed to update lesson')
     }
   }
@@ -80,12 +88,15 @@ export default function EditLessonPage({ params }) {
 
   if (error || !lesson) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-6">
+        <div className="text-center max-w-md">
           <div className="text-6xl mb-4">🔍</div>
           <p className="text-xl text-red-600 dark:text-red-400">{error || 'Lesson not found'}</p>
-          <Link href="/admin" className="text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block">
-            Back to Dashboard
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            Lesson ID: {lessonId}
+          </p>
+          <Link href="/admin" className="text-blue-600 dark:text-blue-400 hover:underline mt-4 inline-block">
+            ← Back to Dashboard
           </Link>
         </div>
       </div>

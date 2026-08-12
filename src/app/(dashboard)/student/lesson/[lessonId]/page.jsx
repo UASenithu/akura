@@ -7,6 +7,15 @@ import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
 import { ArrowLeft, CheckCircle, Circle, Sparkles, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
 
+import { useEffect, useState, use } from 'react'  // ← Add 'use'
+
+export default function LessonViewPage({ params }) {
+  const unwrappedParams = use(params)  // ← UNWRAP!
+  const lessonId = unwrappedParams.lessonId  // ← USE unwrapped
+  
+  // Rest of your code...
+}
+
 export default function LessonViewPage() {
   const params = useParams()
   const router = useRouter()
@@ -150,6 +159,8 @@ export default function LessonViewPage() {
               </p>
             </div>
           </div>
+
+          
           
           <button
             onClick={toggleComplete}
