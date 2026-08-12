@@ -243,12 +243,12 @@ export default function LessonsPage() {
                       )}
                     </Link>
 
-                    <Link
-                    href={`/student/lesson/${lesson.id}`}
-                    className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition"
-                    >
-                    View
-                    </Link>
+                        <Link
+                        href={`/student/lesson/${lesson.id}`}
+                        className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition"
+                        >
+                        View
+                        </Link>
                   </div>
                 </motion.div>
               )

@@ -1,16 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useEffect, useState, use } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
 import { ArrowLeft, CheckCircle, Circle, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default function LessonViewPage() {
+export default function LessonViewPage({ params }) {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const lessonId = searchParams.get('lessonId')
+  // ✅ CORRECT: Unwrap params with use() for Next.js 16
+  const { lessonId } = use(params)
   
   const [lesson, setLesson] = useState(null)
   const [subject, setSubject] = useState(null)
@@ -25,7 +25,8 @@ export default function LessonViewPage() {
     async function fetchData() {
       try {
         if (!lessonId) {
-          router.push('/student')
+          setError('No lesson ID provided')
+          setLoading(false)
           return
         }
 
@@ -84,7 +85,7 @@ export default function LessonViewPage() {
       }
     }
     fetchData()
-  }, [lessonId, router])
+  }, [lessonId])
 
   async function toggleComplete() {
     if (!user) return
@@ -116,14 +117,14 @@ export default function LessonViewPage() {
   function goToPrevLesson() {
     if (currentIndex > 0) {
       const prevLesson = allLessons[currentIndex - 1]
-      router.push(`/student/lesson?lessonId=${prevLesson.id}`)
+      router.push(`/student/lesson/${prevLesson.id}`)
     }
   }
 
   function goToNextLesson() {
     if (currentIndex < allLessons.length - 1) {
       const nextLesson = allLessons[currentIndex + 1]
-      router.push(`/student/lesson?lessonId=${nextLesson.id}`)
+      router.push(`/student/lesson/${nextLesson.id}`)
     }
   }
 
