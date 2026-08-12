@@ -1,23 +1,16 @@
 'use client'
 
 import { useEffect, useState, use } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
 import { ArrowLeft, BookOpen, ChevronRight, Sparkles } from 'lucide-react'
 
 export default function SubjectsPage({ params }) {
+  const router = useRouter()
   const unwrappedParams = use(params)
   const streamId = unwrappedParams.streamId
-  
-  // Rest of your code...
-}
-
-export default function SubjectsPage() {
-  const params = useParams()
-  const router = useRouter()
-  const streamId = params.streamId
   
   const [stream, setStream] = useState(null)
   const [subjects, setSubjects] = useState([])
@@ -25,23 +18,38 @@ export default function SubjectsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      // Get stream info
-      const { data: streamData } = await supabase
-        .from('streams')
-        .select('*')
-        .eq('id', streamId)
-        .single()
-      setStream(streamData)
+      try {
+        // Get stream info
+        const { data: streamData, error: streamError } = await supabase
+          .from('streams')
+          .select('*')
+          .eq('id', streamId)
+          .single()
 
-      // Get subjects for this stream
-      const { data: subjectsData } = await supabase
-        .from('subjects')
-        .select('*')
-        .eq('stream_id', streamId)
-        .order('name')
-      setSubjects(subjectsData || [])
-      
-      setLoading(false)
+        if (streamError) {
+          console.error('Error fetching stream:', streamError)
+          setLoading(false)
+          return
+        }
+        setStream(streamData)
+
+        // Get subjects for this stream
+        const { data: subjectsData, error: subjectsError } = await supabase
+          .from('subjects')
+          .select('*')
+          .eq('stream_id', streamId)
+          .order('name')
+
+        if (subjectsError) {
+          console.error('Error fetching subjects:', subjectsError)
+        }
+        setSubjects(subjectsData || [])
+        
+        setLoading(false)
+      } catch (error) {
+        console.error('Error:', error)
+        setLoading(false)
+      }
     }
     fetchData()
   }, [streamId])
@@ -67,9 +75,9 @@ export default function SubjectsPage() {
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Link href="/student" className="p-2 hover:bg-white/20 rounded-xl transition">
+            <button onClick={() => router.back()} className="p-2 hover:bg-white/20 rounded-xl transition">
               <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-            </Link>
+            </button>
             <div>
               <h1 className="text-xl font-bold text-slate-800 dark:text-white">
                 {stream?.icon} {stream?.name}
@@ -112,7 +120,7 @@ export default function SubjectsPage() {
                 whileHover={{ y: -8, scale: 1.02 }}
                 className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-2xl transition-all duration-300"
               >
-                <Link href={`/student/lessons/${subject.id}`} className="block p-6 relative">
+                <Link href={`/student/lessons?subjectId=${subject.id}`} className="block p-6 relative">
                   <div className="text-5xl mb-4 float group-hover:scale-110 transition-transform duration-300">
                     {subject.icon || '📖'}
                   </div>
