@@ -9,8 +9,7 @@ import { ArrowLeft, BookOpen, ChevronRight, Sparkles } from 'lucide-react'
 
 export default function SubjectsPage({ params }) {
   const router = useRouter()
-  const unwrappedParams = use(params)
-  const streamId = unwrappedParams.streamId
+  const { streamId } = use(params)
   
   const [stream, setStream] = useState(null)
   const [subjects, setSubjects] = useState([])
@@ -19,35 +18,22 @@ export default function SubjectsPage({ params }) {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Get stream info
-        const { data: streamData, error: streamError } = await supabase
+        const { data: streamData } = await supabase
           .from('streams')
           .select('*')
           .eq('id', streamId)
           .single()
-
-        if (streamError) {
-          console.error('Error fetching stream:', streamError)
-          setLoading(false)
-          return
-        }
         setStream(streamData)
 
-        // Get subjects for this stream
-        const { data: subjectsData, error: subjectsError } = await supabase
+        const { data: subjectsData } = await supabase
           .from('subjects')
           .select('*')
           .eq('stream_id', streamId)
           .order('name')
-
-        if (subjectsError) {
-          console.error('Error fetching subjects:', subjectsError)
-        }
         setSubjects(subjectsData || [])
-        
-        setLoading(false)
       } catch (error) {
         console.error('Error:', error)
+      } finally {
         setLoading(false)
       }
     }
@@ -71,7 +57,6 @@ export default function SubjectsPage({ params }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       
-      {/* Navbar */}
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -93,22 +78,15 @@ export default function SubjectsPage({ params }) {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         
-        {/* Hero */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 mb-8 shadow-2xl shadow-indigo-500/25">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-10"></div>
-          
           <div className="relative">
             <div className="text-6xl mb-4">{stream?.icon || '📚'}</div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
-              {stream?.name}
-            </h2>
-            <p className="text-indigo-100 mt-2 text-lg">
-              {stream?.description || 'Choose a subject to start learning'}
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-white">{stream?.name}</h2>
+            <p className="text-indigo-100 mt-2 text-lg">{stream?.description || 'Choose a subject to start learning'}</p>
           </div>
         </div>
 
-        {/* Subjects Grid */}
         {subjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {subjects.map((subject, index) => (

@@ -7,8 +7,8 @@ import { getUserStats } from '@/app/actions/gamification'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
-  BookOpen, Sparkles, Brain, Zap, TrendingUp, 
-  Award, Clock, ChevronRight, User, LogOut,
+  BookOpen, Sparkles, Brain, Zap, 
+  Award, ChevronRight, LogOut,
   Flame, Target, GraduationCap, Star
 } from 'lucide-react'
 
@@ -26,17 +26,14 @@ export default function StudentDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Get current user
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
 
-        // Fetch streams
         const { data: streamsData } = await supabase
           .from('streams')
           .select('*')
         setStreams(streamsData || [])
         
-        // Get REAL gamification stats from database
         if (user) {
           const userStats = await getUserStats(user.id)
           setStats({
@@ -72,7 +69,7 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       
-      {/* Premium Navbar */}
+      {/* Navbar */}
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -127,7 +124,7 @@ export default function StudentDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         
-        {/* Hero Section */}
+        {/* Hero */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 mb-8 shadow-2xl shadow-indigo-500/25">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-10"></div>
           
@@ -167,70 +164,50 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards with REAL Data */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <motion.div 
-            whileHover={{ y: -4 }}
-            className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4"
-          >
+          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
             <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
               <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Lessons Done</p>
-              <p className="text-lg font-bold text-slate-800 dark:text-white">
-                {stats.completed}
-              </p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">{stats.completed}</p>
             </div>
           </motion.div>
           
-          <motion.div 
-            whileHover={{ y: -4 }}
-            className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4"
-          >
+          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
             <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
               <Flame className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Streak</p>
-              <p className="text-lg font-bold text-slate-800 dark:text-white">
-                {stats.streak} days 🔥
-              </p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">{stats.streak} days 🔥</p>
             </div>
           </motion.div>
           
-          <motion.div 
-            whileHover={{ y: -4 }}
-            className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4"
-          >
+          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
             <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
               <Star className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Points</p>
-              <p className="text-lg font-bold text-slate-800 dark:text-white">
-                {stats.points} ⭐
-              </p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">{stats.points} ⭐</p>
             </div>
           </motion.div>
           
-          <motion.div 
-            whileHover={{ y: -4 }}
-            className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4"
-          >
+          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
               <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Badges</p>
-              <p className="text-lg font-bold text-slate-800 dark:text-white">
-                {stats.badges.length} 🏅
-              </p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">{stats.badges.length} 🏅</p>
             </div>
           </motion.div>
         </div>
 
-        {/* Badges Display */}
+        {/* Badges */}
         {stats.badges.length > 0 && (
           <div className="mb-8">
             <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3 flex items-center gap-2">
@@ -239,11 +216,7 @@ export default function StudentDashboard() {
             </h4>
             <div className="flex flex-wrap gap-3">
               {stats.badges.map((badge) => (
-                <motion.div
-                  key={badge.id}
-                  whileHover={{ scale: 1.1 }}
-                  className="glass rounded-xl px-4 py-2 border border-white/20 dark:border-white/5 flex items-center gap-2"
-                >
+                <motion.div key={badge.id} whileHover={{ scale: 1.1 }} className="glass rounded-xl px-4 py-2 border border-white/20 dark:border-white/5 flex items-center gap-2">
                   <span className="text-2xl">{badge.icon}</span>
                   <div>
                     <p className="text-sm font-semibold text-slate-700 dark:text-white">{badge.name}</p>
@@ -255,15 +228,11 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* Subject Streams - Premium Grid */}
+        {/* Streams */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">
-              Your Streams 📚
-            </h3>
-            <span className="text-sm text-slate-500 dark:text-slate-400">
-              {streams.length} available
-            </span>
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">Your Streams 📚</h3>
+            <span className="text-sm text-slate-500 dark:text-slate-400">{streams.length} available</span>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -276,9 +245,7 @@ export default function StudentDashboard() {
                 whileHover={{ y: -8, scale: 1.02 }}
                 className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-2xl transition-all duration-300"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <Link href={`/student/subjects/${stream.id}`} className="block p-6 relative">
+                <Link href={`/student/${stream.id}`} className="block p-6 relative">
                   <div className="text-5xl mb-4 float group-hover:scale-110 transition-transform duration-300">
                     {stream.icon || '📖'}
                   </div>
@@ -301,30 +268,21 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Motivation Cards */}
+        {/* Motivation */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <motion.div 
-            whileHover={{ y: -4 }}
-            className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 text-center"
-          >
+          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 text-center">
             <div className="text-4xl mb-3 float">🧘</div>
             <h4 className="font-bold text-slate-800 dark:text-white">Stress-Free Learning</h4>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Stories & mindmaps for easy memory</p>
           </motion.div>
           
-          <motion.div 
-            whileHover={{ y: -4 }}
-            className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 text-center"
-          >
+          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 text-center">
             <div className="text-4xl mb-3 float">🏆</div>
             <h4 className="font-bold text-slate-800 dark:text-white">Daily Streak</h4>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Stay motivated with rewards</p>
           </motion.div>
           
-          <motion.div 
-            whileHover={{ y: -4 }}
-            className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 text-center"
-          >
+          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 text-center">
             <div className="text-4xl mb-3 float">🤖</div>
             <h4 className="font-bold text-slate-800 dark:text-white">AI Assistant</h4>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">24/7 help when you're stuck</p>

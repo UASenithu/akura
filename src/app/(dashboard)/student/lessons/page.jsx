@@ -5,11 +5,11 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
-import { ArrowLeft, BookOpen, CheckCircle, Circle, Sparkles } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Circle, Sparkles } from 'lucide-react'
 
 export default function LessonsPage() {
-  const searchParams = useSearchParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const subjectId = searchParams.get('subjectId')
   
   const [subject, setSubject] = useState(null)
@@ -27,11 +27,9 @@ export default function LessonsPage() {
           return
         }
 
-        // Get current user
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
 
-        // Get subject info
         const { data: subjectData, error: subjectError } = await supabase
           .from('subjects')
           .select('*, streams(name, icon)')
@@ -39,14 +37,12 @@ export default function LessonsPage() {
           .single()
 
         if (subjectError) {
-          console.error('Error fetching subject:', subjectError)
           setError('Subject not found')
           setLoading(false)
           return
         }
         setSubject(subjectData)
 
-        // Get lessons for this subject
         const { data: lessonsData, error: lessonsError } = await supabase
           .from('lessons')
           .select('*')
@@ -54,27 +50,21 @@ export default function LessonsPage() {
           .order('order_num', { ascending: true })
 
         if (lessonsError) {
-          console.error('Error fetching lessons:', lessonsError)
           setError('Error loading lessons')
           setLoading(false)
           return
         }
-        
-        console.log('Lessons found:', lessonsData?.length || 0)
         setLessons(lessonsData || [])
 
-        // Get completed lessons for this user
         if (user) {
-          const { data: progressData, error: progressError } = await supabase
+          const { data: progressData } = await supabase
             .from('user_progress')
             .select('lesson_id')
             .eq('user_id', user.id)
             .eq('completed', true)
           
-          if (!progressError) {
-            const completedIds = progressData?.map(p => p.lesson_id) || []
-            setCompletedLessons(completedIds)
-          }
+          const completedIds = progressData?.map(p => p.lesson_id) || []
+          setCompletedLessons(completedIds)
         }
       } catch (err) {
         console.error('Error:', err)
@@ -96,7 +86,6 @@ export default function LessonsPage() {
           .delete()
           .eq('user_id', user.id)
           .eq('lesson_id', lessonId)
-        
         setCompletedLessons(prev => prev.filter(id => id !== lessonId))
       } else {
         await supabase
@@ -107,7 +96,6 @@ export default function LessonsPage() {
             completed: true,
             completed_at: new Date().toISOString()
           })
-        
         setCompletedLessons(prev => [...prev, lessonId])
       }
     } catch (err) {
@@ -158,11 +146,11 @@ export default function LessonsPage() {
             </button>
             <div>
               <h1 className="text-xl font-bold text-slate-800 dark:text-white">
-                {subject?.name || 'Lessons'}
+                {subject?.name}
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-indigo-400" />
-                {subject?.streams?.name || 'Subject'} • {lessons.length} lessons
+                {subject?.streams?.name} • {lessons.length} lessons
               </p>
             </div>
           </div>
@@ -176,7 +164,6 @@ export default function LessonsPage() {
 
       <div className="max-w-4xl mx-auto px-6 py-8">
         
-        {/* Progress Bar */}
         <div className="mb-8 glass rounded-2xl p-6 border border-white/20 dark:border-white/5">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium text-slate-700 dark:text-white">
@@ -196,7 +183,6 @@ export default function LessonsPage() {
           </div>
         </div>
 
-        {/* Lessons List */}
         {lessons.length > 0 ? (
           <div className="space-y-4">
             {lessons.map((lesson, index) => {
@@ -223,7 +209,7 @@ export default function LessonsPage() {
                       )}
                     </button>
 
-                    <Link href={`/student/lesson/${lesson.id}`} className="flex-1 min-w-0">
+                    <Link href={`/student/view-lesson/${lesson.id}`} className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium text-slate-400 dark:text-slate-500">
                           #{String(index + 1).padStart(2, '0')}
@@ -236,18 +222,13 @@ export default function LessonsPage() {
                           {lesson.title}
                         </h3>
                       </div>
-                      {lesson.mindmap_url && (
-                        <div className="mt-1 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
-                          <span>📷 Has mindmap</span>
-                        </div>
-                      )}
                     </Link>
 
                     <Link
-                    href={`/student/view-lesson/${lesson.id}`}
-                    className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition"
+                      href={`/student/view-lesson/${lesson.id}`}
+                      className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition"
                     >
-                    View
+                      View
                     </Link>
                   </div>
                 </motion.div>
@@ -259,9 +240,6 @@ export default function LessonsPage() {
             <div className="text-6xl mb-4">📝</div>
             <h3 className="text-xl font-semibold text-slate-700 dark:text-white">No Lessons Yet</h3>
             <p className="text-slate-500 dark:text-slate-400 mt-2">Admin will add lessons to this subject soon!</p>
-            <Link href="/student" className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 hover:underline">
-              Back to Dashboard
-            </Link>
           </div>
         )}
       </div>

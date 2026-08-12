@@ -9,7 +9,6 @@ import { ArrowLeft, CheckCircle, Circle, Sparkles, ChevronLeft, ChevronRight } f
 
 export default function ViewLessonPage({ params }) {
   const router = useRouter()
-  // ✅ CORRECT: Unwrap params with use() for Next.js 16
   const { lessonId } = use(params)
   
   const [lesson, setLesson] = useState(null)
@@ -30,11 +29,9 @@ export default function ViewLessonPage({ params }) {
           return
         }
 
-        // Get current user
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
 
-        // Get lesson
         const { data: lessonData, error: lessonError } = await supabase
           .from('lessons')
           .select('*, subjects(*)')
@@ -42,7 +39,6 @@ export default function ViewLessonPage({ params }) {
           .single()
 
         if (lessonError) {
-          console.error('Error fetching lesson:', lessonError)
           setError('Lesson not found')
           setLoading(false)
           return
@@ -51,7 +47,6 @@ export default function ViewLessonPage({ params }) {
         setLesson(lessonData)
         setSubject(lessonData?.subjects)
 
-        // Get all lessons for this subject
         if (lessonData) {
           const { data: lessonsData } = await supabase
             .from('lessons')
@@ -64,7 +59,6 @@ export default function ViewLessonPage({ params }) {
           setCurrentIndex(index >= 0 ? index : 0)
         }
 
-        // Check if completed
         if (user) {
           const { data: progressData } = await supabase
             .from('user_progress')
@@ -157,7 +151,6 @@ export default function ViewLessonPage({ params }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       
-      {/* Navbar */}
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -194,14 +187,12 @@ export default function ViewLessonPage({ params }) {
 
       <div className="max-w-4xl mx-auto px-6 py-8">
         
-        {/* Lesson Content */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="glass rounded-3xl p-8 border border-white/20 dark:border-white/5"
         >
-          {/* Mindmap Image */}
           {lesson.mindmap_url && (
             <div className="mb-6 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
               <img 
@@ -213,14 +204,12 @@ export default function ViewLessonPage({ params }) {
             </div>
           )}
 
-          {/* Rich Content */}
           <div 
             className="prose prose-indigo dark:prose-invert max-w-none prose-headings:text-slate-800 dark:prose-headings:text-white prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-strong:text-slate-800 dark:prose-strong:text-white prose-li:text-slate-600 dark:prose-li:text-slate-300 prose-img:rounded-xl prose-img:shadow-lg"
             dangerouslySetInnerHTML={{ __html: lesson.story_content || '<p class="text-slate-500 dark:text-slate-400">No content available yet.</p>' }}
           />
         </motion.div>
 
-        {/* Navigation */}
         <div className="flex justify-between items-center mt-8 gap-4">
           <button
             onClick={goToPrevLesson}
@@ -253,7 +242,6 @@ export default function ViewLessonPage({ params }) {
           </button>
         </div>
 
-        {/* Completion Status */}
         <div className="mt-6 glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {isCompleted ? (
