@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { signOut } from '@/app/actions/auth'
+import { getUserStats } from '@/app/actions/gamification'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { 
   BookOpen, Sparkles, Brain, Zap, TrendingUp, 
   Award, Clock, ChevronRight, User, LogOut,
-  Flame, Target, GraduationCap
+  Flame, Target, GraduationCap, Star
 } from 'lucide-react'
 
 export default function StudentDashboard() {
@@ -18,27 +19,38 @@ export default function StudentDashboard() {
   const [stats, setStats] = useState({
     completed: 0,
     streak: 0,
-    points: 0
+    points: 0,
+    badges: []
   })
 
   useEffect(() => {
     async function fetchData() {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser()
+        setUser(user)
 
-      const { data: streamsData } = await supabase
-        .from('streams')
-        .select('*')
-      setStreams(streamsData || [])
-      
-      // Mock stats (will be real when we add progress tracking)
-      setStats({
-        completed: Math.floor(Math.random() * 20) + 5,
-        streak: Math.floor(Math.random() * 15) + 1,
-        points: Math.floor(Math.random() * 500) + 100
-      })
-      
-      setLoading(false)
+        // Fetch streams
+        const { data: streamsData } = await supabase
+          .from('streams')
+          .select('*')
+        setStreams(streamsData || [])
+        
+        // Get REAL gamification stats from database
+        if (user) {
+          const userStats = await getUserStats(user.id)
+          setStats({
+            completed: userStats.lessonsCompleted || 0,
+            streak: userStats.streak || 0,
+            points: userStats.points || 0,
+            badges: userStats.badges || []
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchData()
   }, [])
@@ -86,8 +98,13 @@ export default function StudentDashboard() {
               </div>
               <div className="w-px h-4 bg-slate-200 dark:bg-slate-600" />
               <div className="flex items-center gap-1.5 text-xs">
-                <Award className="w-4 h-4 text-amber-500" />
+                <Star className="w-4 h-4 text-amber-500" />
                 <span className="font-bold text-slate-700 dark:text-white">{stats.points}</span>
+              </div>
+              <div className="w-px h-4 bg-slate-200 dark:bg-slate-600" />
+              <div className="flex items-center gap-1.5 text-xs">
+                <Award className="w-4 h-4 text-purple-500" />
+                <span className="font-bold text-slate-700 dark:text-white">{stats.badges.length}</span>
               </div>
             </div>
             
@@ -150,7 +167,7 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Quick Stats */}
+        {/* Stats Cards with REAL Data */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <motion.div 
             whileHover={{ y: -4 }}
@@ -160,9 +177,9 @@ export default function StudentDashboard() {
               <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Progress</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Lessons Done</p>
               <p className="text-lg font-bold text-slate-800 dark:text-white">
-                {Math.round((stats.completed / 50) * 100)}%
+                {stats.completed}
               </p>
             </div>
           </motion.div>
@@ -171,12 +188,14 @@ export default function StudentDashboard() {
             whileHover={{ y: -4 }}
             className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4"
           >
-            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-              <Brain className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+              <Flame className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Focus Time</p>
-              <p className="text-lg font-bold text-slate-800 dark:text-white">2.5 hrs</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Streak</p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">
+                {stats.streak} days 🔥
+              </p>
             </div>
           </motion.div>
           
@@ -185,11 +204,13 @@ export default function StudentDashboard() {
             className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4"
           >
             <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
-              <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              <Star className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Streak</p>
-              <p className="text-lg font-bold text-slate-800 dark:text-white">{stats.streak} days</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Points</p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">
+                {stats.points} ⭐
+              </p>
             </div>
           </motion.div>
           
@@ -197,15 +218,42 @@ export default function StudentDashboard() {
             whileHover={{ y: -4 }}
             className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4"
           >
-            <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl">
-              <Award className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+              <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Points</p>
-              <p className="text-lg font-bold text-slate-800 dark:text-white">{stats.points}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Badges</p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">
+                {stats.badges.length} 🏅
+              </p>
             </div>
           </motion.div>
         </div>
+
+        {/* Badges Display */}
+        {stats.badges.length > 0 && (
+          <div className="mb-8">
+            <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3 flex items-center gap-2">
+              <Award className="w-4 h-4" />
+              Your Badges
+            </h4>
+            <div className="flex flex-wrap gap-3">
+              {stats.badges.map((badge) => (
+                <motion.div
+                  key={badge.id}
+                  whileHover={{ scale: 1.1 }}
+                  className="glass rounded-xl px-4 py-2 border border-white/20 dark:border-white/5 flex items-center gap-2"
+                >
+                  <span className="text-2xl">{badge.icon}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700 dark:text-white">{badge.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{badge.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Subject Streams - Premium Grid */}
         <div className="mb-8">
@@ -246,7 +294,6 @@ export default function StudentDashboard() {
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
 
-                  {/* Animated border glow on hover */}
                   <div className="absolute inset-0 border-2 border-transparent group-hover:border-indigo-500/20 rounded-2xl transition-all duration-300 pointer-events-none"></div>
                 </Link>
               </motion.div>
@@ -254,7 +301,7 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Motivation Cards with Icons */}
+        {/* Motivation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <motion.div 
             whileHover={{ y: -4 }}
