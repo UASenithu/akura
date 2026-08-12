@@ -55,17 +55,27 @@ export async function getLessons() {
 
 // Get single lesson
 export async function getLesson(id) {
-  const { data, error } = await supabaseServer
-    .from('lessons')
-    .select('*')
-    .eq('id', id)
-    .single()
+  try {
+    const { data, error } = await supabaseServer
+      .from('lessons')
+      .select(`
+        *,
+        subjects (id, name),
+        modules (id, title)
+      `)
+      .eq('id', id)
+      .single()
 
-  if (error) {
-    return { error: error.message }
+    if (error) {
+      console.error('Error fetching lesson:', error)
+      return { error: error.message, lesson: null }
+    }
+
+    return { lesson: data }
+  } catch (error) {
+    console.error('Error in getLesson:', error)
+    return { error: error.message, lesson: null }
   }
-
-  return { lesson: data }
 }
 
 // Update lesson

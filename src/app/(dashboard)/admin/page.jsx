@@ -32,11 +32,16 @@ export default function AdminDashboard() {
       const { subjects } = await getSubjects()
       setSubjects(subjects || [])
 
-      // Get student count
-      const { count } = await supabase
+     
+      // Get student count - FIXED
+      const { count, error: countError } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'student')
+
+      if (countError) {
+        console.error('Error counting students:', countError)
+      }
 
       setStats({
         totalLessons: lessons?.length || 0,
