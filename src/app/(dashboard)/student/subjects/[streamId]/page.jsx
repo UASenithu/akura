@@ -1,12 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
 import { ArrowLeft, BookOpen, ChevronRight, Sparkles } from 'lucide-react'
-import { useEffect, useState, use } from 'react'
 
 export default function SubjectsPage({ params }) {
   const unwrappedParams = use(params)

@@ -1,17 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
 import { ArrowLeft, CheckCircle, Circle, Sparkles, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
-
-import { useEffect, useState, use } from 'react'  // ← Add 'use'
+import { awardPoints } from '@/app/actions/gamification'
+import toast, { Toaster } from 'react-hot-toast'
 
 export default function LessonViewPage({ params }) {
-  const unwrappedParams = use(params)  // ← UNWRAP!
-  const lessonId = unwrappedParams.lessonId  // ← USE unwrapped
+  const unwrappedParams = use(params)
+  const lessonId = unwrappedParams.lessonId
   
   // Rest of your code...
 }
