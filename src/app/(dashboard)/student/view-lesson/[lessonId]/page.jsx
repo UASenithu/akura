@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { motion } from 'framer-motion'
 import { ArrowLeft, CheckCircle, Circle, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default function LessonViewPage({ params }) {
+export default function ViewLessonPage({ params }) {
   const router = useRouter()
   // ✅ CORRECT: Unwrap params with use() for Next.js 16
   const { lessonId } = use(params)
@@ -53,17 +53,15 @@ export default function LessonViewPage({ params }) {
 
         // Get all lessons for this subject
         if (lessonData) {
-          const { data: lessonsData, error: lessonsError } = await supabase
+          const { data: lessonsData } = await supabase
             .from('lessons')
             .select('id, title')
             .eq('subject_id', lessonData.subject_id)
             .order('order_num', { ascending: true })
           
-          if (!lessonsError) {
-            setAllLessons(lessonsData || [])
-            const index = lessonsData?.findIndex(l => l.id === lessonId) || 0
-            setCurrentIndex(index >= 0 ? index : 0)
-          }
+          setAllLessons(lessonsData || [])
+          const index = lessonsData?.findIndex(l => l.id === lessonId) || 0
+          setCurrentIndex(index >= 0 ? index : 0)
         }
 
         // Check if completed
@@ -117,14 +115,14 @@ export default function LessonViewPage({ params }) {
   function goToPrevLesson() {
     if (currentIndex > 0) {
       const prevLesson = allLessons[currentIndex - 1]
-      router.push(`/student/lesson/${prevLesson.id}`)
+      router.push(`/student/view-lesson/${prevLesson.id}`)
     }
   }
 
   function goToNextLesson() {
     if (currentIndex < allLessons.length - 1) {
       const nextLesson = allLessons[currentIndex + 1]
-      router.push(`/student/lesson/${nextLesson.id}`)
+      router.push(`/student/view-lesson/${nextLesson.id}`)
     }
   }
 
