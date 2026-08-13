@@ -42,14 +42,15 @@ export async function askAI(formData) {
       return { error: 'Please ask a question!' }
     }
 
-    // Get the model
+    // 🔧 FIXED: Use gemini-pro (more stable)
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
-      systemInstruction: SYSTEM_PROMPT
+      model: 'gemini-pro'
     })
 
-    // Build the prompt with context
+    // Build the prompt
     const prompt = `
+${SYSTEM_PROMPT}
+
 Subject: ${subject}
 ${context ? `Context: ${context}` : ''}
 Student Question: ${question}
@@ -80,11 +81,12 @@ Please help this Sri Lankan A/L student with their question. Be encouraging and 
 export async function getStudyTips(subject) {
   try {
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
-      systemInstruction: SYSTEM_PROMPT
+      model: 'gemini-pro'
     })
 
     const prompt = `
+${SYSTEM_PROMPT}
+
 Give 5 practical study tips for ${subject} for a Sri Lankan A/L student.
 Make it encouraging and actionable. 
 Keep it under 100 words total.
@@ -107,11 +109,12 @@ Format as bullet points with emojis.
 export async function getSummary(topic) {
   try {
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
-      systemInstruction: SYSTEM_PROMPT
+      model: 'gemini-pro'
     })
 
     const prompt = `
+${SYSTEM_PROMPT}
+
 Summarize "${topic}" for a Sri Lankan A/L student.
 Keep it clear and simple.
 Include key points and a simple example.
