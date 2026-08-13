@@ -27,11 +27,20 @@ export async function signUp(formData) {
     return { error: error.message }
   }
 
-  if (role === 'admin') {
+  // ✅ Insert user into public.users immediately
+  if (data.user) {
     await supabaseServer
       .from('users')
-      .update({ role: 'admin' })
-      .eq('id', data.user.id)
+      .upsert({
+        id: data.user.id,
+        full_name: fullName,
+        email: email,
+        stream: stream,
+        role: role,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
   }
 
   revalidatePath('/')
@@ -41,48 +50,77 @@ export async function signUp(formData) {
 export async function signIn(formData) {
   const email = formData.get('email')
   const password = formData.get('password')
-  const role = formData.get('role')
+  const role = formData.get('role') // 'student' or 'admin'
 
-  const { data, error } = await supabaseServer.auth.signInWithPassword({
-    email,
-    password,
-  })
+  try {
+    const { data, error } = await supabaseServer.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-  if (error) {
-    return { error: error.message }
+    if (error) {
+      return { error: error.message }
+    }
+
+    if (!data.user) {
+      return { error: 'User not found' }
+    }
+
+    // ✅ FIXED: Check if user exists in public.users, if not create them
+    let userRole = 'student'
+    
+    try {
+      const { data: userData, error: userError } = await supabaseServer
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single()
+
+      if (userError) {
+        console.log('User not found in public.users, creating...')
+        // ✅ Auto-create user in public.users
+        const { error: insertError } = await supabaseServer
+          .from('users')
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
+            stream: data.user.user_metadata?.stream || 'Not Set',
+            role: 'student',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+
+        if (insertError) {
+          console.error('Error inserting user:', insertError)
+          return { error: 'Failed to create user profile' }
+        }
+        userRole = 'student'
+      } else {
+        userRole = userData?.role || 'student'
+      }
+    } catch (err) {
+      console.error('Role check error:', err)
+      return { error: 'Authentication error. Please try again.' }
+    }
+
+    // ✅ Check if role matches
+    if (role !== userRole) {
+      await supabaseServer.auth.signOut()
+      return { error: 'Unauthorized role access' }
+    }
+
+    revalidatePath('/')
+    redirect(role === 'admin' ? '/admin' : '/student')
+    
+  } catch (error) {
+    console.error('SignIn error:', error)
+    return { error: 'Login failed. Please try again.' }
   }
-
-  const { data: userData } = await supabaseServer
-    .from('users')
-    .select('role')
-    .eq('id', data.user.id)
-    .single()
-
-  if (userData?.role !== role) {
-    await supabaseServer.auth.signOut()
-    return { error: 'Unauthorized role access' }
-  }
-
-  revalidatePath('/')
-  redirect(role === 'admin' ? '/admin' : '/student')
 }
 
 export async function signOut() {
   await supabaseServer.auth.signOut()
   revalidatePath('/')
   redirect('/login')
-}
-// Add this to your existing auth.js file
-export async function getCurrentUser() {
-  try {
-    const { data: { user }, error } = await supabaseServer.auth.getUser()
-    if (error) {
-      console.error('Error getting user:', error)
-      return { user: null, error: error.message }
-    }
-    return { user: user, error: null }
-  } catch (error) {
-    console.error('Error in getCurrentUser:', error)
-    return { user: null, error: error.message }
-  }
 }

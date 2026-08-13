@@ -12,24 +12,31 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  // ✅ Fix hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
 
   if (!mounted) {
-    return null // or a loading placeholder
+    return null
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
     setIsLoading(true)
+    setError('')
+    
     const formData = new FormData(event.target)
     formData.append('role', role)
     
-    const result = await signIn(formData)
-    if (result?.error) {
-      setError(result.error)
+    try {
+      const result = await signIn(formData)
+      if (result?.error) {
+        setError(result.error)
+        setIsLoading(false)
+      }
+      // If no error, redirect happens in the action
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
       setIsLoading(false)
     }
   }
@@ -145,6 +152,11 @@ export default function LoginPage() {
                 className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                 placeholder="••••••••"
               />
+              <div className="text-right mt-1">
+                <Link href="/reset-password" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
             </motion.div>
 
             <AnimatePresence>
@@ -191,14 +203,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </motion.div>
-
-
-         
-            <div className="text-right mt-1">
-            <Link href="/reset-password" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
-                Forgot password?
-            </Link>
-            </div>
 
           {/* Feature Badges */}
           <motion.div
