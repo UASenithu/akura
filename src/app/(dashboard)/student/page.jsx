@@ -12,6 +12,12 @@ import {
   Flame, Target, GraduationCap, Star,
   Users
 } from 'lucide-react'
+import { 
+  BookOpen, Sparkles, Brain, Zap, 
+  Award, ChevronRight, LogOut,
+  Flame, Target, GraduationCap, Star,
+  Users, BarChart3
+} from 'lucide-react'
 
 export default function StudentDashboard() {
   const [user, setUser] = useState(null)
@@ -274,6 +280,22 @@ export default function StudentDashboard() {
             ))}
           </div>
         </div>
+
+        // Analytics Card - Add this to the Quick Actions grid
+        <Link href="/student/analytics" className="block">
+        <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-indigo-300 transition">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+            <p className="text-sm font-medium text-slate-700 dark:text-white">Analytics</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Track your progress</p>
+            </div>
+            <div className="ml-auto">
+            <span className="text-xs text-blue-600 dark:text-blue-400">→</span>
+            </div>
+        </motion.div>
+        </Link>
 
         {/* Quick Actions - 3 Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
