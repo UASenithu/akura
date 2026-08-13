@@ -274,6 +274,18 @@ export default function StudentDashboard() {
           </div>
         </div>
 
+                <Link href="/student/quizzes" className="block">
+        <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-indigo-300 transition">
+            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+            <BookOpen className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+            <p className="text-sm font-medium text-slate-700 dark:text-white">Past Papers</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Test your knowledge</p>
+            </div>
+        </motion.div>
+        </Link>
+
         {/* ✅ AI Assistant Card - FIXED POSITION */}
         <div className="mb-8">
           <Link href="/student/ai">
