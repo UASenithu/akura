@@ -60,11 +60,10 @@ export default function StudentAnalyticsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // ✅ Get user - same as dashboard
+        // ✅ Same as dashboard - get user
         const { data: { user: currentUser } } = await supabase.auth.getUser()
         
         if (!currentUser) {
-          // Don't redirect, just show login message
           setLoading(false)
           return
         }
@@ -96,14 +95,13 @@ export default function StudentAnalyticsPage() {
           setAverageScore(Math.round(avg))
         }
 
-        // Get subject progress (lessons completed per subject)
+        // Get subject progress
         const { data: lessons } = await supabase
           .from('user_progress')
           .select('lesson_id, lessons(subject_id, subjects(name))')
           .eq('user_id', currentUser.id)
           .eq('completed', true)
 
-        // Group by subject
         const subjectMap = {}
         lessons?.forEach(p => {
           const subjectName = p.lessons?.subjects?.name || 'Unknown'
@@ -111,7 +109,7 @@ export default function StudentAnalyticsPage() {
         })
         setSubjectProgress(Object.entries(subjectMap).map(([name, count]) => ({ name, count })))
 
-        // Generate daily activity (last 7 days)
+        // Generate daily activity
         const today = new Date()
         const daily = []
         for (let i = 6; i >= 0; i--) {
@@ -182,7 +180,7 @@ export default function StudentAnalyticsPage() {
     ]
   }
 
-  // Chart Data: Subject Progress (Doughnut)
+  // Chart Data: Subject Progress
   const subjectChartData = {
     labels: subjectProgress.map(s => s.name),
     datasets: [
@@ -201,7 +199,6 @@ export default function StudentAnalyticsPage() {
     ]
   }
 
-  // Chart Options
   const chartOptions = {
     responsive: true,
     plugins: {
@@ -228,11 +225,26 @@ export default function StudentAnalyticsPage() {
     }
   }
 
-  // ✅ If no user, show login prompt
-  if (!loading && !user) {
+  // ✅ Show loading or login
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-indigo-200 dark:border-indigo-800 rounded-full"></div>
+            <div className="absolute inset-0 w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="mt-6 text-slate-500 dark:text-slate-400">Loading your analytics...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ✅ If no user, show login prompt with redirect
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md glass rounded-3xl shadow-2xl p-8 border border-white/20 dark:border-white/5">
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Please Login</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-2">You need to be logged in to view your analytics.</p>
@@ -249,20 +261,6 @@ export default function StudentAnalyticsPage() {
     )
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-indigo-200 dark:border-indigo-800 rounded-full"></div>
-            <div className="absolute inset-0 w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <p className="mt-6 text-slate-500 dark:text-slate-400">Loading your analytics...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       
@@ -270,7 +268,7 @@ export default function StudentAnalyticsPage() {
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <button onClick={() => router.back()} className="p-2 hover:bg-white/20 rounded-xl transition">
+            <button onClick={() => router.push('/student')} className="p-2 hover:bg-white/20 rounded-xl transition">
               <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             </button>
             <div>
