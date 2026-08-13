@@ -86,6 +86,12 @@ export default function StudentDashboard() {
               </p>
             </div>
           </div>
+
+          {/* ✅ ONE AI LINK - KEEP THIS ONE */}
+          <Link href="/student/ai" className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition flex items-center gap-2">
+            <Brain className="w-4 h-4" />
+            AI Help
+          </Link>
           
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 bg-white/50 dark:bg-slate-800/50 px-4 py-2 rounded-2xl border border-white/20 dark:border-white/5">
@@ -266,6 +272,26 @@ export default function StudentDashboard() {
               </motion.div>
             ))}
           </div>
+        </div>
+
+        {/* ✅ AI Assistant Card - FIXED POSITION */}
+        <div className="mb-8">
+          <Link href="/student/ai">
+            <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-indigo-300 transition">
+              <div className="p-4 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl shadow-lg shadow-emerald-500/25">
+                <Brain className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-slate-800 dark:text-white">AI Assistant</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Ask anything 24/7 - Get instant study help! 🤖</p>
+              </div>
+              <div className="ml-auto">
+                <span className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-medium hover:shadow-lg hover:shadow-indigo-500/25 transition">
+                  Try Now →
+                </span>
+              </div>
+            </motion.div>
+          </Link>
         </div>
 
         {/* Motivation */}
