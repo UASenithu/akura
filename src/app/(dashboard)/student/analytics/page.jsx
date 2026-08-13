@@ -60,14 +60,28 @@ export default function StudentAnalyticsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // ✅ Same as dashboard - get user
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        setLoading(true)
         
+        // ✅ Try getUser first
+        let { data: { user: currentUser } } = await supabase.auth.getUser()
+        
+        // ✅ If no user, try getSession as fallback
         if (!currentUser) {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            currentUser = session.user
+            console.log('✅ User found via session:', currentUser.email)
+          }
+        }
+
+        // ✅ If still no user, show login
+        if (!currentUser) {
+          console.log('❌ No user found in analytics')
           setLoading(false)
           return
         }
 
+        console.log('✅ User found:', currentUser.email)
         setUser(currentUser)
 
         // Get gamification stats
@@ -225,7 +239,7 @@ export default function StudentAnalyticsPage() {
     }
   }
 
-  // ✅ Show loading or login
+  // ✅ Show loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -240,7 +254,7 @@ export default function StudentAnalyticsPage() {
     )
   }
 
-  // ✅ If no user, show login prompt with redirect
+  // ✅ If no user, show login prompt
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4">
@@ -248,6 +262,7 @@ export default function StudentAnalyticsPage() {
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Please Login</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-2">You need to be logged in to view your analytics.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Redirecting to login...</p>
           <div className="mt-6 flex flex-col gap-3">
             <Link href="/login" className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg transition">
               Login Now
