@@ -22,67 +22,42 @@ export default function TakeQuizPage({ params }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [startTime, setStartTime] = useState(null)
-  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
         
-        // ✅ Try multiple methods to get user
-        let currentUser = null
+        // ✅ Get user from supabase auth with better error handling
+        const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser()
         
-        // Method 1: Get session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        console.log('🔐 Session:', session?.user?.email)
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError)
-        }
-        
-        if (session?.user) {
-          currentUser = session.user
-          console.log('✅ User found via session:', currentUser.email)
-        }
-        
-        // Method 2: If session failed, try getUser
-        if (!currentUser) {
-          const { data: { user }, error: userError } = await supabase.auth.getUser()
-          console.log('👤 getUser result:', user?.email)
-          
-          if (!userError && user) {
-            currentUser = user
-            console.log('✅ User found via getUser:', currentUser.email)
+        if (userError) {
+          console.error('User error:', userError)
+          // Try to refresh session
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            setUser(session.user)
+            // Continue with quiz loading
+          } else {
+            setError('Please login to take this quiz')
+            setLoading(false)
+            return
+          }
+        } else if (currentUser) {
+          console.log('✅ User found:', currentUser.email)
+          setUser(currentUser)
+        } else {
+          // Try to get session as fallback
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            console.log('✅ User found via session:', session.user.email)
+            setUser(session.user)
+          } else {
+            setError('Please login to take this quiz')
+            setLoading(false)
+            return
           }
         }
-        
-        // Method 3: Check local storage for session
-        if (!currentUser) {
-          const storedSession = localStorage.getItem('supabase.auth.token')
-          if (storedSession) {
-            console.log('📦 Found session in localStorage')
-            // Try to refresh session
-            const { data: { session: refreshedSession } } = await supabase.auth.refreshSession()
-            if (refreshedSession?.user) {
-              currentUser = refreshedSession.user
-              console.log('✅ User found via refresh:', currentUser.email)
-            }
-          }
-        }
-
-        if (!currentUser) {
-          console.error('❌ No user found!')
-          setError('Please login to take this quiz')
-          setLoading(false)
-          // Redirect to login after 2 seconds
-          setTimeout(() => {
-            router.push('/login')
-          }, 2000)
-          return
-        }
-
-        setUser(currentUser)
-        setAuthChecked(true)
 
         // Get quiz data
         const { quiz: quizData, error: quizError } = await getQuiz(quizId)
@@ -111,7 +86,7 @@ export default function TakeQuizPage({ params }) {
       }
     }
     fetchData()
-  }, [quizId, router])
+  }, [quizId])
 
   // Timer
   useEffect(() => {
@@ -219,7 +194,6 @@ export default function TakeQuizPage({ params }) {
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Please Login</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-2">You need to be logged in to take this quiz.</p>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Redirecting to login...</p>
           <div className="mt-6 flex flex-col gap-3">
             <Link href="/login" className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg transition">
               Login Now
