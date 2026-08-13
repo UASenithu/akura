@@ -177,7 +177,7 @@ export async function getQuizAnalytics(userId) {
       averageScore,
       highestScore,
       passRate,
-      attempts: attempts.slice(0, 5) // latest 5 attempts
+      attempts: attempts.slice(0, 5)
     }
   } catch (error) {
     console.error('Error in getQuizAnalytics:', error)
