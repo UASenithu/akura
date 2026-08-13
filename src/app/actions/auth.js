@@ -72,3 +72,17 @@ export async function signOut() {
   revalidatePath('/')
   redirect('/login')
 }
+// Add this to your existing auth.js file
+export async function getCurrentUser() {
+  try {
+    const { data: { user }, error } = await supabaseServer.auth.getUser()
+    if (error) {
+      console.error('Error getting user:', error)
+      return { user: null, error: error.message }
+    }
+    return { user: user, error: null }
+  } catch (error) {
+    console.error('Error in getCurrentUser:', error)
+    return { user: null, error: error.message }
+  }
+}

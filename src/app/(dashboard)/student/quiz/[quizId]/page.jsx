@@ -3,8 +3,8 @@
 import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabaseClient'
 import { getQuiz, submitQuiz } from '@/app/actions/quiz'
+import { getCurrentUser } from '@/app/actions/auth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, ChevronLeft, ChevronRight, Send, AlertCircle, Loader2 } from 'lucide-react'
 
@@ -28,36 +28,18 @@ export default function TakeQuizPage({ params }) {
       try {
         setLoading(true)
         
-        // ✅ Get user from supabase auth with better error handling
-        const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser()
+        // ✅ Get user from server action (more reliable)
+        const { user: currentUser, error: userError } = await getCurrentUser()
         
-        if (userError) {
+        if (userError || !currentUser) {
           console.error('User error:', userError)
-          // Try to refresh session
-          const { data: { session } } = await supabase.auth.getSession()
-          if (session?.user) {
-            setUser(session.user)
-            // Continue with quiz loading
-          } else {
-            setError('Please login to take this quiz')
-            setLoading(false)
-            return
-          }
-        } else if (currentUser) {
-          console.log('✅ User found:', currentUser.email)
-          setUser(currentUser)
-        } else {
-          // Try to get session as fallback
-          const { data: { session } } = await supabase.auth.getSession()
-          if (session?.user) {
-            console.log('✅ User found via session:', session.user.email)
-            setUser(session.user)
-          } else {
-            setError('Please login to take this quiz')
-            setLoading(false)
-            return
-          }
+          setError('Please login to take this quiz')
+          setLoading(false)
+          return
         }
+
+        console.log('✅ User found:', currentUser.email)
+        setUser(currentUser)
 
         // Get quiz data
         const { quiz: quizData, error: quizError } = await getQuiz(quizId)
