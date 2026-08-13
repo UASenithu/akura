@@ -26,6 +26,21 @@ import {
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
 
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+
+export default async function AnalyticsPage() {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // ... rest of your component (you can now safely fetch user data)
+  // Pass the user data as props to your client component
+}
+
 // Register ChartJS components
 ChartJS.register(
   CategoryScale,
