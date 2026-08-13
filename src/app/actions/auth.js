@@ -11,40 +11,48 @@ export async function signUp(formData) {
   const stream = formData.get('stream')
   const role = formData.get('role') || 'student'
 
-  const { data, error } = await supabaseServer.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
-        stream: stream,
-        role: role
+  try {
+    const { data, error } = await supabaseServer.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          stream: stream,
+          role: role
+        }
+      }
+    })
+
+    if (error) {
+      return { error: error.message }
+    }
+
+    // Insert user into public.users
+    if (data.user) {
+      const { error: insertError } = await supabaseServer
+        .from('users')
+        .upsert({
+          id: data.user.id,
+          full_name: fullName,
+          email: email,
+          stream: stream,
+          role: role,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+
+      if (insertError) {
+        console.error('Insert error:', insertError)
       }
     }
-  })
 
-  if (error) {
+    revalidatePath('/')
+    redirect(role === 'admin' ? '/admin' : '/student')
+  } catch (error) {
+    console.error('SignUp error:', error)
     return { error: error.message }
   }
-
-  // ✅ Insert user into public.users immediately
-  if (data.user) {
-    await supabaseServer
-      .from('users')
-      .upsert({
-        id: data.user.id,
-        full_name: fullName,
-        email: email,
-        stream: stream,
-        role: role,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-  }
-
-  revalidatePath('/')
-  redirect(role === 'admin' ? '/admin' : '/student')
 }
 
 export async function signIn(formData) {
@@ -53,6 +61,7 @@ export async function signIn(formData) {
   const role = formData.get('role') // 'student' or 'admin'
 
   try {
+    // 1. Authenticate user
     const { data, error } = await supabaseServer.auth.signInWithPassword({
       email,
       password,
@@ -66,48 +75,76 @@ export async function signIn(formData) {
       return { error: 'User not found' }
     }
 
-    // ✅ FIXED: Check if user exists in public.users, if not create them
+    // 2. Check if user exists in public.users
     let userRole = 'student'
-    
+    let userExists = false
+
     try {
       const { data: userData, error: userError } = await supabaseServer
         .from('users')
-        .select('role')
+        .select('role, id')
         .eq('id', data.user.id)
-        .single()
+        .maybeSingle() // ✅ Use maybeSingle instead of single
 
       if (userError) {
-        console.log('User not found in public.users, creating...')
-        // ✅ Auto-create user in public.users
+        console.error('Error checking user:', userError)
+      }
+
+      if (userData) {
+        userExists = true
+        userRole = userData.role || 'student'
+      }
+    } catch (err) {
+      console.error('User check error:', err)
+    }
+
+    // 3. If user doesn't exist in public.users, create them
+    if (!userExists) {
+      console.log('Creating user in public.users...')
+      
+      try {
+        const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
+        const stream = data.user.user_metadata?.stream || 'Not Set'
+        
         const { error: insertError } = await supabaseServer
           .from('users')
           .insert({
             id: data.user.id,
+            full_name: fullName,
             email: data.user.email,
-            full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
-            stream: data.user.user_metadata?.stream || 'Not Set',
+            stream: stream,
             role: 'student',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
 
         if (insertError) {
-          console.error('Error inserting user:', insertError)
-          return { error: 'Failed to create user profile' }
+          console.error('Insert error:', insertError)
+          return { error: 'Failed to create user profile: ' + insertError.message }
         }
+        
         userRole = 'student'
-      } else {
-        userRole = userData?.role || 'student'
+        console.log('User created successfully!')
+      } catch (insertErr) {
+        console.error('Insert exception:', insertErr)
+        return { error: 'Failed to create user profile' }
       }
-    } catch (err) {
-      console.error('Role check error:', err)
-      return { error: 'Authentication error. Please try again.' }
     }
 
-    // ✅ Check if role matches
+    // 4. Check if role matches
     if (role !== userRole) {
       await supabaseServer.auth.signOut()
       return { error: 'Unauthorized role access' }
+    }
+
+    // 5. Update last login
+    try {
+      await supabaseServer
+        .from('users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', data.user.id)
+    } catch (updateErr) {
+      console.error('Update last_login error:', updateErr)
     }
 
     revalidatePath('/')
@@ -123,4 +160,16 @@ export async function signOut() {
   await supabaseServer.auth.signOut()
   revalidatePath('/')
   redirect('/login')
+}
+
+export async function getCurrentUser() {
+  try {
+    const { data: { user }, error } = await supabaseServer.auth.getUser()
+    if (error) {
+      return { user: null, error: error.message }
+    }
+    return { user: user, error: null }
+  } catch (error) {
+    return { user: null, error: error.message }
+  }
 }
