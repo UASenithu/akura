@@ -22,34 +22,53 @@ export default function TakeQuizPage({ params }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [startTime, setStartTime] = useState(null)
-  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
         
-        // ✅ Get session from Supabase client
+        // ✅ TRY MULTIPLE METHODS TO GET USER
+        let currentUser = null
+
+        // Method 1: Get session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError)
-          setError('Authentication error. Please login again.')
-          setLoading(false)
-          return
+        if (!sessionError && session?.user) {
+          currentUser = session.user
+          console.log('✅ User found via session:', currentUser.email)
         }
 
-        if (!session) {
-          console.log('No active session')
+        // Method 2: If no session, try getUser
+        if (!currentUser) {
+          const { data: { user }, error: userError } = await supabase.auth.getUser()
+          if (!userError && user) {
+            currentUser = user
+            console.log('✅ User found via getUser:', currentUser.email)
+          }
+        }
+
+        // Method 3: Check if we have a user in localStorage
+        if (!currentUser) {
+          const storedUser = localStorage.getItem('supabase.auth.token')
+          if (storedUser) {
+            console.log('📦 Found stored session, refreshing...')
+            const { data: { session: refreshedSession } } = await supabase.auth.refreshSession()
+            if (refreshedSession?.user) {
+              currentUser = refreshedSession.user
+              console.log('✅ User found via refresh:', currentUser.email)
+            }
+          }
+        }
+
+        // ✅ If still no user, show login page
+        if (!currentUser) {
+          console.error('❌ No user found!')
           setError('Please login to take this quiz')
           setLoading(false)
           return
         }
 
-        const currentUser = session.user
-        console.log('✅ User found:', currentUser.email)
         setUser(currentUser)
-        setAuthChecked(true)
 
         // Get quiz data
         const { quiz: quizData, error: quizError } = await getQuiz(quizId)
@@ -179,6 +198,7 @@ export default function TakeQuizPage({ params }) {
     )
   }
 
+  // ✅ Show login button with redirect
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
