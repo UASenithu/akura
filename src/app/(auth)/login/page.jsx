@@ -193,7 +193,7 @@ export default function LoginPage() {
           </motion.div>
 
 
-          // Add this after the password input field
+         
             <div className="text-right mt-1">
             <Link href="/reset-password" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
                 Forgot password?
