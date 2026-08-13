@@ -8,13 +8,6 @@ import { getQuizzes, getUserQuizAttempts } from '@/app/actions/quiz'
 import { motion } from 'framer-motion'
 import { BookOpen, Clock, Target, Trophy, ArrowLeft, Brain } from 'lucide-react'
 
-// Add this state
-const [currentUser, setCurrentUser] = useState(null)
-
-// In your useEffect, get the user:
-const { data: { user } } = await supabase.auth.getUser()
-setCurrentUser(user)
-
 export default function QuizzesPage() {
   const router = useRouter()
   const [user, setUser] = useState(null)
@@ -27,19 +20,23 @@ export default function QuizzesPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
+        // ✅ Get current user
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        setUser(currentUser)
 
+        // Get subjects
         const { data: subjectsData } = await supabase
           .from('subjects')
           .select('id, name')
         setSubjects(subjectsData || [])
 
+        // Get quizzes
         const { quizzes: quizzesData } = await getQuizzes()
         setQuizzes(quizzesData || [])
 
-        if (user) {
-          const { attempts: attemptsData } = await getUserQuizAttempts(user.id)
+        // Get user attempts
+        if (currentUser) {
+          const { attempts: attemptsData } = await getUserQuizAttempts(currentUser.id)
           const attemptsMap = {}
           attemptsData.forEach(a => {
             attemptsMap[a.quiz_id] = a
@@ -202,22 +199,23 @@ export default function QuizzesPage() {
                     </span>
                   </div>
 
-                <Link
-                href={attempted ? `/student/quiz/result/${quiz.id}` : `/student/quiz/${quiz.id}?userId=${currentUser?.id || ''}`}
-                className="w-full py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition flex items-center justify-center gap-2"
-                >
-                {attempted ? (
-                    <>
-                    <Trophy className="w-4 h-4" />
-                    View Results
-                    </>
-                ) : (
-                    <>
-                    Start Quiz
-                    <ArrowRight className="w-4 h-4" />
-                    </>
-                )}
-                </Link>
+                  {/* ✅ FIXED: Pass userId in URL */}
+                  <Link
+                    href={attempted ? `/student/quiz/result/${quiz.id}` : `/student/quiz/${quiz.id}?userId=${user?.id || ''}`}
+                    className="w-full py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition flex items-center justify-center gap-2"
+                  >
+                    {attempted ? (
+                      <>
+                        <Trophy className="w-4 h-4" />
+                        View Results
+                      </>
+                    ) : (
+                      <>
+                        Start Quiz
+                        <ArrowLeft className="w-4 h-4" />
+                      </>
+                    )}
+                  </Link>
                 </motion.div>
               )
             })}

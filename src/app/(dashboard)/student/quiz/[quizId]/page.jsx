@@ -29,40 +29,41 @@ export default function TakeQuizPage({ params }) {
       try {
         setLoading(true)
         
-        // ✅ Get user from Supabase first
-        const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser()
+        // ✅ Try to get user from Supabase
+        let currentUser = null
         
-        let finalUser = null
-        
-        if (currentUser) {
-          finalUser = currentUser
-          console.log('✅ User found via Supabase:', finalUser.email)
-        } else {
-          // Try session as fallback
+        const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser()
+        if (!userError && supabaseUser) {
+          currentUser = supabaseUser
+          console.log('✅ User found via Supabase:', currentUser.email)
+        }
+
+        // ✅ If no user, try session
+        if (!currentUser) {
           const { data: { session } } = await supabase.auth.getSession()
           if (session?.user) {
-            finalUser = session.user
-            console.log('✅ User found via session:', finalUser.email)
+            currentUser = session.user
+            console.log('✅ User found via session:', currentUser.email)
           }
         }
 
-        // ✅ If still no user, check URL for userId
-        if (!finalUser) {
+        // ✅ If still no user, get from URL
+        if (!currentUser) {
           const userIdFromUrl = searchParams.get('userId')
           if (userIdFromUrl) {
-            console.log('📌 Using userId from URL:', userIdFromUrl)
-            finalUser = { id: userIdFromUrl, email: 'user@akura.lk' }
+            currentUser = { id: userIdFromUrl, email: 'user@akura.lk' }
+            console.log('✅ Using userId from URL:', userIdFromUrl)
           }
         }
 
-        if (!finalUser) {
+        if (!currentUser) {
           console.error('❌ No user found!')
           setError('Please login to take this quiz')
           setLoading(false)
           return
         }
 
-        setUser(finalUser)
+        setUser(currentUser)
 
         // Get quiz data
         const { quiz: quizData, error: quizError } = await getQuiz(quizId)
