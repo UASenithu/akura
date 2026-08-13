@@ -8,6 +8,17 @@ import { getQuiz, submitQuiz } from '@/app/actions/quiz'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, ChevronLeft, ChevronRight, Send, AlertCircle, Loader2 } from 'lucide-react'
 
+// At the top of your component, add this check
+useEffect(() => {
+  async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      router.push('/login?redirect=/student/quizzes')
+    }
+  }
+  checkAuth()
+}, [])
+
 export default function TakeQuizPage({ params }) {
   const router = useRouter()
   const { quizId } = use(params)
@@ -295,6 +306,9 @@ export default function TakeQuizPage({ params }) {
             </div>
           </motion.div>
         </AnimatePresence>
+
+
+        
 
         {/* Navigation */}
         <div className="flex justify-between items-center mt-6">
