@@ -1,103 +1,137 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-
-// System prompt - makes AI act as a friendly Sri Lankan tutor
-const SYSTEM_PROMPT = `
-You are "Akura AI" - a friendly, encouraging study assistant for Sri Lankan A/L students.
-
-Your personality:
-- Speak in a mix of English and simple Sinhala (Singlish) when helpful
-- Be warm, encouraging, and stress-free
-- Use emojis occasionally (😊, 📚, 💡, 🎯)
-- Keep explanations simple and clear
-- Break down complex topics into easy steps
-- Never say "I can't help" - always try to guide
-
-Your knowledge:
-- Sri Lankan A/L curriculum (Physical Science, Biological Science, Commerce, Technology)
-- Exam tips and study techniques
-- Subject-specific help (Physics, Chemistry, Biology, Maths, Accounting, Economics, IT)
-
-When answering:
-1. Start with encouragement ("Great question! 😊")
-2. Explain step-by-step
-3. Give practical tips for exams
-4. Ask if they understood
-5. Offer to explain more
-
-Keep responses concise (under 200 words for simple questions).
-`
-
 export async function askAI(formData) {
   try {
     const question = formData.get('question')
     const subject = formData.get('subject') || 'General'
-    const context = formData.get('context') || ''
 
     if (!question) {
       return { error: 'Please ask a question!' }
     }
 
-    // 🔧 FIXED: Use gemini-pro (more stable)
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-pro'
-    })
+    const apiKey = process.env.OPENROUTER_API_KEY
+    
+    if (!apiKey) {
+      console.error('❌ No OpenRouter API key found!')
+      return { 
+        error: "API key missing",
+        answer: "API key not configured. Please check your .env.local file! 🔑" 
+      }
+    }
 
-    // Build the prompt
-    const prompt = `
-${SYSTEM_PROMPT}
+    // ✅ CORRECT OpenRouter model names
+    const models = [
+      'google/gemini-2.0-flash-exp:free',
+      'google/gemini-2.0-flash-lite:free',
+      'google/gemini-1.5-flash:free',
+      'google/gemini-1.5-pro:free',
+      'mistralai/mistral-7b-instruct:free',
+      'meta-llama/llama-3.2-3b-instruct:free'
+    ]
 
-Subject: ${subject}
-${context ? `Context: ${context}` : ''}
-Student Question: ${question}
+    let lastError = null
+    let answer = null
 
-Please help this Sri Lankan A/L student with their question. Be encouraging and helpful!
-`
+    for (const model of models) {
+      try {
+        console.log(`🔄 Trying model: ${model}`)
+        
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://akura.lk',
+            'X-Title': 'Akura AI Assistant'
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              {
+                role: 'system',
+                content: `You are "Akura AI" - a friendly, encouraging study assistant for Sri Lankan A/L students. 
+                Speak in a mix of English and simple Sinhala (Singlish) when helpful.
+                Be warm, encouraging, and stress-free.
+                Use emojis occasionally (😊, 📚, 💡, 🎯).
+                Keep explanations simple and clear.
+                Break down complex topics into easy steps.
+                Never say "I can't help" - always try to guide.`
+              },
+              {
+                role: 'user',
+                content: `Subject: ${subject}\nQuestion: ${question}\n\nPlease help this Sri Lankan A/L student with their question. Be encouraging and helpful!`
+              }
+            ],
+            max_tokens: 500
+          })
+        })
 
-    // Generate response
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
+        const data = await response.json()
+
+        if (response.ok && data.choices?.[0]?.message?.content) {
+          answer = data.choices[0].message.content
+          console.log(`✅ Success with ${model}!`)
+          break
+        } else {
+          console.log(`❌ ${model} failed:`, data.error?.message || 'Unknown error')
+          lastError = data.error?.message
+        }
+      } catch (err) {
+        console.log(`❌ ${model} error:`, err.message)
+        lastError = err.message
+      }
+    }
+
+    if (answer) {
+      return { 
+        answer: answer,
+        subject: subject
+      }
+    }
 
     return { 
-      answer: text || "I'm not sure about that. Could you rephrase your question? 😊",
-      subject: subject
+      error: lastError || "All models failed",
+      answer: "Sorry, I'm having trouble connecting. Please try again later! 😊" 
     }
 
   } catch (error) {
-    console.error('AI Error:', error)
+    console.error('❌ AI Error:', error)
     return { 
-      error: "AI is currently unavailable. Please try again later! 😊",
-      answer: "AI is temporarily down. Try again in a moment! 💪"
+      error: error.message,
+      answer: "AI is temporarily down. Try again in a moment! 💪" 
     }
   }
 }
 
-// Get study tips for a subject
 export async function getStudyTips(subject) {
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-pro'
+    const apiKey = process.env.OPENROUTER_API_KEY
+    
+    if (!apiKey) {
+      return { tips: "Study regularly, practice past papers, and stay calm! 📚💪" }
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          {
+            role: 'user',
+            content: `Give 5 practical study tips for ${subject} for a Sri Lankan A/L student. Make it encouraging and actionable. Keep it under 100 words. Format as bullet points with emojis.`
+          }
+        ]
+      })
     })
 
-    const prompt = `
-${SYSTEM_PROMPT}
+    const data = await response.json()
+    const tips = data.choices?.[0]?.message?.content || "Study regularly, practice past papers, and stay calm! 📚💪"
 
-Give 5 practical study tips for ${subject} for a Sri Lankan A/L student.
-Make it encouraging and actionable. 
-Keep it under 100 words total.
-Format as bullet points with emojis.
-`
-
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
-
-    return { tips: text }
+    return { tips: tips }
 
   } catch (error) {
     console.error('Error getting study tips:', error)
@@ -105,27 +139,35 @@ Format as bullet points with emojis.
   }
 }
 
-// Get quick summary of a topic
 export async function getSummary(topic) {
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-pro'
+    const apiKey = process.env.OPENROUTER_API_KEY
+    
+    if (!apiKey) {
+      return { summary: "I couldn't generate a summary right now. Try again! 😊" }
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          {
+            role: 'user',
+            content: `Summarize "${topic}" for a Sri Lankan A/L student. Keep it clear and simple. Include key points and a simple example. Under 150 words.`
+          }
+        ]
+      })
     })
 
-    const prompt = `
-${SYSTEM_PROMPT}
+    const data = await response.json()
+    const summary = data.choices?.[0]?.message?.content || "I couldn't generate a summary right now. Try again! 😊"
 
-Summarize "${topic}" for a Sri Lankan A/L student.
-Keep it clear and simple.
-Include key points and a simple example.
-Under 150 words.
-`
-
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
-
-    return { summary: text }
+    return { summary: summary }
 
   } catch (error) {
     console.error('Error getting summary:', error)
