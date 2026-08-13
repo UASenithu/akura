@@ -2,7 +2,6 @@
 
 import { supabaseServer } from '@/lib/supabaseServer'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 
 // Get all quizzes for a subject
 export async function getQuizzes(subjectId) {
@@ -64,12 +63,15 @@ export async function getQuiz(quizId) {
   }
 }
 
-// Submit quiz attempt
+// Submit quiz attempt - ONLY ONE DEFINITION!
 export async function submitQuiz(formData) {
   try {
     const quizId = formData.get('quizId')
+    const userId = formData.get('userId')
     const answers = JSON.parse(formData.get('answers'))
     const timeTaken = parseInt(formData.get('timeTaken')) || 0
+
+    console.log('📤 Submitting quiz:', { quizId, userId, timeTaken })
 
     // Get quiz with questions
     const { quiz } = await getQuiz(quizId)
@@ -91,11 +93,13 @@ export async function submitQuiz(formData) {
 
     const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0
 
+    console.log('📊 Score:', { score, totalMarks, percentage })
+
     // Save attempt
     const { data, error } = await supabaseServer
       .from('quiz_attempts')
       .insert({
-        user_id: formData.get('userId'),
+        user_id: userId,
         quiz_id: quizId,
         score: score,
         total_marks: totalMarks,

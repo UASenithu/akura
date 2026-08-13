@@ -87,7 +87,7 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* ✅ ONE AI LINK - KEEP THIS ONE */}
+          {/* AI Help Button */}
           <Link href="/student/ai" className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition flex items-center gap-2">
             <Brain className="w-4 h-4" />
             AI Help
@@ -274,47 +274,36 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-                <Link href="/student/quizzes" className="block">
-        <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-indigo-300 transition">
-            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
-            <BookOpen className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-            <p className="text-sm font-medium text-slate-700 dark:text-white">Past Papers</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Test your knowledge</p>
-            </div>
-        </motion.div>
-        </Link>
-
-
-
-                <Link href="/student/quizzes">
-        <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-amber-300 transition">
-            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
-            <BookOpen className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-            <p className="text-sm font-medium text-slate-700 dark:text-white">Past Papers</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Test your knowledge</p>
-            </div>
-        </motion.div>
-        </Link>
-
-        {/* ✅ AI Assistant Card - FIXED POSITION */}
-        <div className="mb-8">
-          <Link href="/student/ai">
-            <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-indigo-300 transition">
-              <div className="p-4 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl shadow-lg shadow-emerald-500/25">
-                <Brain className="w-8 h-8 text-white" />
+        {/* Quick Actions - Past Papers & AI Assistant */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {/* Past Papers Card - SINGLE CARD */}
+          <Link href="/student/quizzes" className="block">
+            <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-amber-300 transition">
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                <BookOpen className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-lg font-semibold text-slate-800 dark:text-white">AI Assistant</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Ask anything 24/7 - Get instant study help! 🤖</p>
+                <p className="text-sm font-medium text-slate-700 dark:text-white">Past Papers</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Test your knowledge</p>
               </div>
               <div className="ml-auto">
-                <span className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-medium hover:shadow-lg hover:shadow-indigo-500/25 transition">
-                  Try Now →
-                </span>
+                <span className="text-xs text-amber-600 dark:text-amber-400">→</span>
+              </div>
+            </motion.div>
+          </Link>
+
+          {/* AI Assistant Card */}
+          <Link href="/student/ai" className="block">
+            <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-emerald-300 transition">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
+                <Brain className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-white">AI Assistant</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Ask anything 24/7</p>
+              </div>
+              <div className="ml-auto">
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">→</span>
               </div>
             </motion.div>
           </Link>

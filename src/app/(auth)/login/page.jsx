@@ -10,6 +10,16 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [role, setRole] = useState('student')
   const [isLoading, setIsLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // ✅ Fix hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return null // or a loading placeholder
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -64,7 +74,7 @@ export default function LoginPage() {
             </p>
           </motion.div>
 
-          {/* Role Toggle - Premium */}
+          {/* Role Toggle */}
           <div className="relative bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 mb-8">
             <div className="relative flex">
               <motion.div
@@ -113,6 +123,7 @@ export default function LoginPage() {
                 type="email"
                 name="email"
                 required
+                suppressHydrationWarning
                 className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                 placeholder="you@akura.lk"
               />
@@ -130,6 +141,7 @@ export default function LoginPage() {
                 type="password"
                 name="password"
                 required
+                suppressHydrationWarning
                 className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                 placeholder="••••••••"
               />

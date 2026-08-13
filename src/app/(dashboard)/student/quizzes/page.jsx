@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { getQuizzes, getUserQuizAttempts } from '@/app/actions/quiz'
 import { motion } from 'framer-motion'
-import { BookOpen, Clock, Target, Trophy, ArrowLeft, CheckCircle, XCircle, Brain } from 'lucide-react'
+import { BookOpen, Clock, Target, Trophy, ArrowLeft, Brain } from 'lucide-react'
 
 export default function QuizzesPage() {
   const router = useRouter()
@@ -23,17 +23,14 @@ export default function QuizzesPage() {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
 
-        // Get subjects
         const { data: subjectsData } = await supabase
           .from('subjects')
           .select('id, name')
         setSubjects(subjectsData || [])
 
-        // Get quizzes
         const { quizzes: quizzesData } = await getQuizzes()
         setQuizzes(quizzesData || [])
 
-        // Get user attempts
         if (user) {
           const { attempts: attemptsData } = await getUserQuizAttempts(user.id)
           const attemptsMap = {}
@@ -210,7 +207,7 @@ export default function QuizzesPage() {
                     ) : (
                       <>
                         Start Quiz
-                        <ArrowRight className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" />
                       </>
                     )}
                   </Link>
