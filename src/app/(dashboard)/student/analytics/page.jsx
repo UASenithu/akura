@@ -62,28 +62,37 @@ export default function StudentAnalyticsPage() {
       try {
         setLoading(true)
         
-        // ✅ Try getUser first
-        let { data: { user: currentUser } } = await supabase.auth.getUser()
+        // ✅ EXACT SAME PATTERN AS STUDENT DASHBOARD
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        console.log('🔍 Analytics - getUser result:', currentUser?.email)
         
-        // ✅ If no user, try getSession as fallback
         if (!currentUser) {
+          console.log('❌ No user found, checking session...')
+          // Try session as fallback
           const { data: { session } } = await supabase.auth.getSession()
-          if (session?.user) {
-            currentUser = session.user
-            console.log('✅ User found via session:', currentUser.email)
+          console.log('🔍 Analytics - session:', session?.user?.email)
+          
+          if (!session?.user) {
+            console.log('❌ No session found either!')
+            setLoading(false)
+            return
           }
+          // Use session user
+          setUser(session.user)
+          // Continue with session user
+          await loadData(session.user)
+        } else {
+          setUser(currentUser)
+          await loadData(currentUser)
         }
-
-        // ✅ If still no user, show login
-        if (!currentUser) {
-          console.log('❌ No user found in analytics')
-          setLoading(false)
-          return
-        }
-
-        console.log('✅ User found:', currentUser.email)
-        setUser(currentUser)
-
+      } catch (error) {
+        console.error('Error fetching analytics:', error)
+        setLoading(false)
+      }
+    }
+    
+    async function loadData(currentUser) {
+      try {
         // Get gamification stats
         const userStats = await getUserStats(currentUser.id)
         setStats({
@@ -146,13 +155,14 @@ export default function StudentAnalyticsPage() {
           })
         }
         setDailyActivity(daily)
-
+        
+        setLoading(false)
       } catch (error) {
-        console.error('Error fetching analytics:', error)
-      } finally {
+        console.error('Error loading data:', error)
         setLoading(false)
       }
     }
+    
     fetchData()
   }, [])
 
@@ -262,7 +272,6 @@ export default function StudentAnalyticsPage() {
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Please Login</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-2">You need to be logged in to view your analytics.</p>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Redirecting to login...</p>
           <div className="mt-6 flex flex-col gap-3">
             <Link href="/login" className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg transition">
               Login Now
