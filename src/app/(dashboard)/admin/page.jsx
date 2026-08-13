@@ -223,7 +223,7 @@ export default function AdminDashboard() {
             </motion.div>
           </Link>
 
-          // Add this card to your admin dashboard grid
+          
           <Link href="/admin/students">
             <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 cursor-pointer hover:border-indigo-300 transition text-center">
               <div className="text-4xl mb-3">👥</div>
