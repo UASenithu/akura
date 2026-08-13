@@ -8,17 +8,6 @@ import { getQuiz, submitQuiz } from '@/app/actions/quiz'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, ChevronLeft, ChevronRight, Send, AlertCircle, Loader2 } from 'lucide-react'
 
-// At the top of your component, add this check
-useEffect(() => {
-  async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      router.push('/login?redirect=/student/quizzes')
-    }
-  }
-  checkAuth()
-}, [])
-
 export default function TakeQuizPage({ params }) {
   const router = useRouter()
   const { quizId } = use(params)
@@ -33,6 +22,7 @@ export default function TakeQuizPage({ params }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [startTime, setStartTime] = useState(null)
+  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -53,16 +43,13 @@ export default function TakeQuizPage({ params }) {
           console.log('No active session')
           setError('Please login to take this quiz')
           setLoading(false)
-          // Redirect to login after delay
-          setTimeout(() => {
-            router.push('/login?redirect=/student/quizzes')
-          }, 2000)
           return
         }
 
         const currentUser = session.user
         console.log('✅ User found:', currentUser.email)
         setUser(currentUser)
+        setAuthChecked(true)
 
         // Get quiz data
         const { quiz: quizData, error: quizError } = await getQuiz(quizId)
@@ -91,7 +78,7 @@ export default function TakeQuizPage({ params }) {
       }
     }
     fetchData()
-  }, [quizId, router])
+  }, [quizId])
 
   // Timer
   useEffect(() => {
@@ -306,9 +293,6 @@ export default function TakeQuizPage({ params }) {
             </div>
           </motion.div>
         </AnimatePresence>
-
-
-        
 
         {/* Navigation */}
         <div className="flex justify-between items-center mt-6">
