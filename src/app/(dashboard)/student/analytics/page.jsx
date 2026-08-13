@@ -8,9 +8,8 @@ import { getUserStats } from '@/app/actions/gamification'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Award, Flame, Star, BookOpen,
-  TrendingUp, Clock, Calendar, Target,
-  BarChart3, PieChart, LineChart,
-  ChevronRight, Sparkles, Brain
+  TrendingUp, Clock, Target,
+  BarChart3, PieChart, Sparkles, Brain
 } from 'lucide-react'
 import {
   Chart as ChartJS,
@@ -25,7 +24,7 @@ import {
   LineElement,
   Filler
 } from 'chart.js'
-import { Bar, Pie, Line, Doughnut } from 'react-chartjs-2'
+import { Bar, Doughnut } from 'react-chartjs-2'
 
 // Register ChartJS components
 ChartJS.register(
@@ -60,39 +59,17 @@ export default function StudentAnalyticsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        setLoading(true)
-        
-        // ✅ EXACT SAME PATTERN AS STUDENT DASHBOARD
+        // ✅ EXACT SAME as dashboard - SIMPLE AND WORKS
         const { data: { user: currentUser } } = await supabase.auth.getUser()
-        console.log('🔍 Analytics - getUser result:', currentUser?.email)
         
+        // ✅ If no user, redirect to login
         if (!currentUser) {
-          console.log('❌ No user found, checking session...')
-          // Try session as fallback
-          const { data: { session } } = await supabase.auth.getSession()
-          console.log('🔍 Analytics - session:', session?.user?.email)
-          
-          if (!session?.user) {
-            console.log('❌ No session found either!')
-            setLoading(false)
-            return
-          }
-          // Use session user
-          setUser(session.user)
-          // Continue with session user
-          await loadData(session.user)
-        } else {
-          setUser(currentUser)
-          await loadData(currentUser)
+          router.push('/login')
+          return
         }
-      } catch (error) {
-        console.error('Error fetching analytics:', error)
-        setLoading(false)
-      }
-    }
-    
-    async function loadData(currentUser) {
-      try {
+
+        setUser(currentUser)
+
         // Get gamification stats
         const userStats = await getUserStats(currentUser.id)
         setStats({
@@ -155,16 +132,15 @@ export default function StudentAnalyticsPage() {
           })
         }
         setDailyActivity(daily)
-        
-        setLoading(false)
+
       } catch (error) {
-        console.error('Error loading data:', error)
+        console.error('Error fetching analytics:', error)
+      } finally {
         setLoading(false)
       }
     }
-    
     fetchData()
-  }, [])
+  }, [router])
 
   // Chart Data: Daily Activity
   const dailyChartData = {
@@ -249,7 +225,6 @@ export default function StudentAnalyticsPage() {
     }
   }
 
-  // ✅ Show loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -264,7 +239,7 @@ export default function StudentAnalyticsPage() {
     )
   }
 
-  // ✅ If no user, show login prompt
+  // ✅ If no user, show login prompt (but this shouldn't happen since we redirect)
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4">
