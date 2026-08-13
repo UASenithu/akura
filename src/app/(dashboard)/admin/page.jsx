@@ -152,6 +152,16 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+
+              // Add this card to your admin dashboard
+      <Link href="/admin/quizzes">
+        <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 cursor-pointer hover:border-indigo-300 transition text-center">
+          <div className="text-4xl mb-3">📝</div>
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Quiz Manager</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Create & manage quizzes</p>
+        </motion.div>
+      </Link>
+
         {/* Lessons Table */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-gray-200 dark:border-slate-700 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">

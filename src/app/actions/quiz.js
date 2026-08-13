@@ -63,7 +63,7 @@ export async function getQuiz(quizId) {
   }
 }
 
-// Submit quiz attempt - ONLY ONE DEFINITION!
+// Submit quiz attempt - FIXED for guest users
 export async function submitQuiz(formData) {
   try {
     const quizId = formData.get('quizId')
@@ -95,11 +95,15 @@ export async function submitQuiz(formData) {
 
     console.log('📊 Score:', { score, totalMarks, percentage })
 
-    // Save attempt
+    // ✅ Check if userId is a valid UUID, if not use NULL
+    const isValidUuid = userId && userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+    const finalUserId = isValidUuid ? userId : null
+
+    // Save attempt - with NULL user_id for guests
     const { data, error } = await supabaseServer
       .from('quiz_attempts')
       .insert({
-        user_id: userId,
+        user_id: finalUserId,
         quiz_id: quizId,
         score: score,
         total_marks: totalMarks,
@@ -129,6 +133,36 @@ export async function submitQuiz(formData) {
   }
 }
 
+    // Save attempt
+    const { data, error } = await supabaseServer
+      .from('quiz_attempts')
+      .insert({
+        user_id: userId,
+        quiz_id: quizId,
+        score: score,
+        total_marks: totalMarks,
+        percentage: percentage,
+        answers: answers,
+        time_taken: timeTaken,
+        completed_at: new Date().toISOString()
+      })
+      .select()
+
+    if (error) {
+      console.error('Error saving attempt:', error)
+      return { error: error.message }
+    }
+
+    revalidatePath('/student/quizzes')
+    return { 
+      attempt: data[0],
+      score: score,
+      totalMarks: totalMarks,
+      percentage: percentage,
+      passed: percentage >= (quiz.passing_score || 50)
+    }
+
+
 // Get user's quiz attempts
 export async function getUserQuizAttempts(userId) {
   try {
@@ -147,6 +181,30 @@ export async function getUserQuizAttempts(userId) {
   } catch (error) {
     console.error('Error in getUserQuizAttempts:', error)
     return { error: error.message, attempts: [] }
+  }
+}
+
+// Toggle quiz publish status
+export async function toggleQuizPublish(formData) {
+  try {
+    const quizId = formData.get('quizId')
+    const isPublished = formData.get('isPublished') === 'true'
+
+    const { error } = await supabaseServer
+      .from('quizzes')
+      .update({ is_published: isPublished })
+      .eq('id', quizId)
+
+    if (error) {
+      console.error('Error toggling publish status:', error)
+      return { error: error.message }
+    }
+
+    revalidatePath('/admin/quizzes')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in toggleQuizPublish:', error)
+    return { error: error.message }
   }
 }
 
