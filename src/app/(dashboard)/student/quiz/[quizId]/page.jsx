@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { getQuiz, submitQuiz } from '@/app/actions/quiz'
@@ -10,6 +10,7 @@ import { Clock, ChevronLeft, ChevronRight, Send, AlertCircle, Loader2 } from 'lu
 
 export default function TakeQuizPage({ params }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { quizId } = use(params)
   
   const [user, setUser] = useState(null)
@@ -28,47 +29,39 @@ export default function TakeQuizPage({ params }) {
       try {
         setLoading(true)
         
-        // ✅ TRY MULTIPLE METHODS TO GET USER
-        let currentUser = null
+        // ✅ Get user ID from URL parameter (NEW!)
+        const userId = searchParams.get('userId')
+        console.log('📌 User ID from URL:', userId)
 
-        // Method 1: Get session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        if (!sessionError && session?.user) {
-          currentUser = session.user
-          console.log('✅ User found via session:', currentUser.email)
-        }
+        // ✅ Get user from Supabase
+        const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser()
+        
+        let finalUser = null
 
-        // Method 2: If no session, try getUser
-        if (!currentUser) {
-          const { data: { user }, error: userError } = await supabase.auth.getUser()
-          if (!userError && user) {
-            currentUser = user
-            console.log('✅ User found via getUser:', currentUser.email)
+        if (currentUser) {
+          finalUser = currentUser
+          console.log('✅ User found via Supabase:', finalUser.email)
+        } else if (userId) {
+          // If we have userId from URL, create a temporary user object
+          finalUser = { id: userId, email: 'user@akura.lk' }
+          console.log('✅ Using user ID from URL:', userId)
+        } else {
+          // Try session as fallback
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            finalUser = session.user
+            console.log('✅ User found via session:', finalUser.email)
           }
         }
 
-        // Method 3: Check if we have a user in localStorage
-        if (!currentUser) {
-          const storedUser = localStorage.getItem('supabase.auth.token')
-          if (storedUser) {
-            console.log('📦 Found stored session, refreshing...')
-            const { data: { session: refreshedSession } } = await supabase.auth.refreshSession()
-            if (refreshedSession?.user) {
-              currentUser = refreshedSession.user
-              console.log('✅ User found via refresh:', currentUser.email)
-            }
-          }
-        }
-
-        // ✅ If still no user, show login page
-        if (!currentUser) {
+        if (!finalUser) {
           console.error('❌ No user found!')
           setError('Please login to take this quiz')
           setLoading(false)
           return
         }
 
-        setUser(currentUser)
+        setUser(finalUser)
 
         // Get quiz data
         const { quiz: quizData, error: quizError } = await getQuiz(quizId)
@@ -97,7 +90,7 @@ export default function TakeQuizPage({ params }) {
       }
     }
     fetchData()
-  }, [quizId])
+  }, [quizId, searchParams])
 
   // Timer
   useEffect(() => {
@@ -198,7 +191,6 @@ export default function TakeQuizPage({ params }) {
     )
   }
 
-  // ✅ Show login button with redirect
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
