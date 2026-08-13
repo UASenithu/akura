@@ -10,7 +10,8 @@ import {
   Users, Plus, Search, BookOpen, 
   UserPlus, Lock, Unlock, ChevronRight,
   MessageCircle, Calendar, ArrowLeft,
-  X, Sparkles, Users as UsersIcon
+  X, Sparkles, Users as UsersIcon,
+  Copy, Check, Link as LinkIcon, Share2
 } from 'lucide-react'
 
 export default function GroupsPage() {
@@ -25,6 +26,8 @@ export default function GroupsPage() {
   const [subjects, setSubjects] = useState([])
   const [joinCode, setJoinCode] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
 
   const [newGroup, setNewGroup] = useState({
     name: '',
@@ -43,17 +46,14 @@ export default function GroupsPage() {
       const { data: { user: currentUser } } = await supabase.auth.getUser()
       setUser(currentUser)
 
-      // Get subjects
       const { data: subjectsData } = await supabase
         .from('subjects')
         .select('id, name')
       setSubjects(subjectsData || [])
 
-      // Get all groups
       const { groups: allGroups } = await getGroups()
       setGroups(allGroups || [])
 
-      // Get user's groups
       if (currentUser) {
         const { data: memberGroups } = await supabase
           .from('group_members')
@@ -106,6 +106,19 @@ export default function GroupsPage() {
       setJoinCode('')
       fetchData()
     }
+  }
+
+  const copyJoinCode = (code) => {
+    navigator.clipboard.writeText(code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const copyGroupLink = (groupId) => {
+    const link = `${window.location.origin}/student/groups/join/${groupId}`
+    navigator.clipboard.writeText(link)
+    setCopiedLink(true)
+    setTimeout(() => setCopiedLink(false), 2000)
   }
 
   const filteredGroups = groups.filter(group => {
@@ -232,6 +245,25 @@ export default function GroupsPage() {
                       <MessageCircle className="w-3 h-3" />
                       <span>{group.messages?.length || 0} messages</span>
                     </div>
+                    {/* Show Join Code for group creators */}
+                    {group.created_by === user?.id && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.preventDefault(); copyJoinCode(group.join_code) }}
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                        >
+                          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          Code: {group.join_code}
+                        </button>
+                        <button
+                          onClick={(e) => { e.preventDefault(); copyGroupLink(group.id) }}
+                          className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                        >
+                          {copiedLink ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+                          Share Link
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 </Link>
               ))}
@@ -375,6 +407,10 @@ export default function GroupsPage() {
                   max="100"
                 />
               </div>
+              <div className="text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/30 p-3 rounded-lg">
+                <p>🔑 A unique join code will be generated for your group automatically.</p>
+                <p className="text-xs mt-1">Share this code with others to let them join your group.</p>
+              </div>
               <button
                 type="submit"
                 className="w-full py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg transition"
@@ -397,29 +433,19 @@ export default function GroupsPage() {
               </button>
             </div>
             <form onSubmit={handleJoinGroup} className="space-y-4">
-              {!selectedGroupId && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Group</label>
-                  <select
-                    onChange={(e) => setSelectedGroupId(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  >
-                    <option value="">Select Group</option>
-                    {groups.map(g => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Join Code (if private)</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Enter Join Code</label>
                 <input
                   type="text"
                   value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  placeholder="Enter join code"
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-center text-2xl font-bold tracking-widest uppercase"
+                  placeholder="e.g., ABC12345"
+                  maxLength={8}
                 />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Enter the 8-character join code shared by the group creator.
+                </p>
               </div>
               <button
                 type="submit"
