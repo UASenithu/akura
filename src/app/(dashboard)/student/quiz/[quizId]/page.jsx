@@ -29,38 +29,29 @@ export default function TakeQuizPage({ params }) {
       try {
         setLoading(true)
         
-        // ✅ Try to get user from Supabase
+        // ✅ Try to get user but DON'T block if not found
         let currentUser = null
         
-        const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser()
-        if (!userError && supabaseUser) {
-          currentUser = supabaseUser
-          console.log('✅ User found via Supabase:', currentUser.email)
-        }
-
-        // ✅ If no user, try session
-        if (!currentUser) {
-          const { data: { session } } = await supabase.auth.getSession()
-          if (session?.user) {
-            currentUser = session.user
-            console.log('✅ User found via session:', currentUser.email)
+        try {
+          const { data: { user: supabaseUser } } = await supabase.auth.getUser()
+          if (supabaseUser) {
+            currentUser = supabaseUser
+            console.log('✅ User found:', currentUser.email)
           }
+        } catch (e) {
+          console.log('No user found, continuing as guest')
         }
 
-        // ✅ If still no user, get from URL
+        // ✅ If no user, create a guest user
         if (!currentUser) {
           const userIdFromUrl = searchParams.get('userId')
           if (userIdFromUrl) {
-            currentUser = { id: userIdFromUrl, email: 'user@akura.lk' }
-            console.log('✅ Using userId from URL:', userIdFromUrl)
+            currentUser = { id: userIdFromUrl, email: 'guest@akura.lk' }
+          } else {
+            // ✅ Create a temporary guest ID
+            currentUser = { id: `guest_${Date.now()}`, email: 'guest@akura.lk' }
+            console.log('👤 Created guest user:', currentUser.id)
           }
-        }
-
-        if (!currentUser) {
-          console.error('❌ No user found!')
-          setError('Please login to take this quiz')
-          setLoading(false)
-          return
         }
 
         setUser(currentUser)
@@ -197,17 +188,12 @@ export default function TakeQuizPage({ params }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">🔒</div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Please Login</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-2">You need to be logged in to take this quiz.</p>
-          <div className="mt-6 flex flex-col gap-3">
-            <Link href="/login" className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg transition">
-              Login Now
-            </Link>
-            <Link href="/student/quizzes" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-              Back to Quizzes
-            </Link>
-          </div>
+          <div className="text-6xl mb-4">😕</div>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{error}</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">Please try again later!</p>
+          <Link href="/student/quizzes" className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 hover:underline">
+            Back to Quizzes
+          </Link>
         </div>
       </div>
     )
