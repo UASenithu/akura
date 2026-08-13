@@ -3,6 +3,18 @@
 import { supabaseServer } from '@/lib/supabaseServer'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 export async function signUp(formData) {
   const email = formData.get('email')
@@ -28,9 +40,8 @@ export async function signUp(formData) {
       return { error: error.message }
     }
 
-    // Insert user into public.users
     if (data.user) {
-      const { error: insertError } = await supabaseServer
+      await supabaseAdmin
         .from('users')
         .upsert({
           id: data.user.id,
@@ -41,10 +52,6 @@ export async function signUp(formData) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
-
-      if (insertError) {
-        console.error('Insert error:', insertError)
-      }
     }
 
     revalidatePath('/')
@@ -58,10 +65,9 @@ export async function signUp(formData) {
 export async function signIn(formData) {
   const email = formData.get('email')
   const password = formData.get('password')
-  const role = formData.get('role') // 'student' or 'admin'
+  const role = formData.get('role')
 
   try {
-    // 1. Authenticate user
     const { data, error } = await supabaseServer.auth.signInWithPassword({
       email,
       password,
@@ -75,20 +81,15 @@ export async function signIn(formData) {
       return { error: 'User not found' }
     }
 
-    // 2. Check if user exists in public.users
     let userRole = 'student'
     let userExists = false
 
     try {
-      const { data: userData, error: userError } = await supabaseServer
+      const { data: userData } = await supabaseAdmin
         .from('users')
-        .select('role, id')
+        .select('role')
         .eq('id', data.user.id)
-        .maybeSingle() // ✅ Use maybeSingle instead of single
-
-      if (userError) {
-        console.error('Error checking user:', userError)
-      }
+        .maybeSingle()
 
       if (userData) {
         userExists = true
@@ -98,7 +99,6 @@ export async function signIn(formData) {
       console.error('User check error:', err)
     }
 
-    // 3. If user doesn't exist in public.users, create them
     if (!userExists) {
       console.log('Creating user in public.users...')
       
@@ -106,9 +106,9 @@ export async function signIn(formData) {
         const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
         const stream = data.user.user_metadata?.stream || 'Not Set'
         
-        const { error: insertError } = await supabaseServer
+        const { error: insertError } = await supabaseAdmin
           .from('users')
-          .insert({
+          .upsert({
             id: data.user.id,
             full_name: fullName,
             email: data.user.email,
@@ -131,15 +131,13 @@ export async function signIn(formData) {
       }
     }
 
-    // 4. Check if role matches
     if (role !== userRole) {
       await supabaseServer.auth.signOut()
       return { error: 'Unauthorized role access' }
     }
 
-    // 5. Update last login
     try {
-      await supabaseServer
+      await supabaseAdmin
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('id', data.user.id)
@@ -148,9 +146,16 @@ export async function signIn(formData) {
     }
 
     revalidatePath('/')
-    redirect(role === 'admin' ? '/admin' : '/student')
+    
+    // ✅ Use return redirect instead of throw
+    const redirectPath = role === 'admin' ? '/admin' : '/student'
+    redirect(redirectPath)
     
   } catch (error) {
+    // ✅ If it's a redirect, let it through
+    if (error?.digest?.includes('NEXT_REDIRECT')) {
+      throw error // Let Next.js handle the redirect
+    }
     console.error('SignIn error:', error)
     return { error: 'Login failed. Please try again.' }
   }
