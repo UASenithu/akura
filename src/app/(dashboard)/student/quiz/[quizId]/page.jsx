@@ -29,28 +29,29 @@ export default function TakeQuizPage({ params }) {
       try {
         setLoading(true)
         
-        // ✅ Get user ID from URL parameter (NEW!)
-        const userId = searchParams.get('userId')
-        console.log('📌 User ID from URL:', userId)
-
-        // ✅ Get user from Supabase
+        // ✅ Get user from Supabase first
         const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser()
         
         let finalUser = null
-
+        
         if (currentUser) {
           finalUser = currentUser
           console.log('✅ User found via Supabase:', finalUser.email)
-        } else if (userId) {
-          // If we have userId from URL, create a temporary user object
-          finalUser = { id: userId, email: 'user@akura.lk' }
-          console.log('✅ Using user ID from URL:', userId)
         } else {
           // Try session as fallback
           const { data: { session } } = await supabase.auth.getSession()
           if (session?.user) {
             finalUser = session.user
             console.log('✅ User found via session:', finalUser.email)
+          }
+        }
+
+        // ✅ If still no user, check URL for userId
+        if (!finalUser) {
+          const userIdFromUrl = searchParams.get('userId')
+          if (userIdFromUrl) {
+            console.log('📌 Using userId from URL:', userIdFromUrl)
+            finalUser = { id: userIdFromUrl, email: 'user@akura.lk' }
           }
         }
 
