@@ -1,3 +1,26 @@
+// ✅ This runs on the server FIRST
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+
+// ✅ Server Component - runs before sending to browser
+export default async function AnalyticsPage() {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // ✅ Pass user data to client component
+  return <AnalyticsClient user={user} />
+}
+
+// ✅ Client Component with all the charts
+'use client'
+
+function AnalyticsClient({ user }) {
+  // ... all your chart code here
+}
 'use client'
 
 import { useEffect, useState } from 'react'
