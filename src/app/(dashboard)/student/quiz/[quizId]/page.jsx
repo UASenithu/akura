@@ -3,8 +3,8 @@
 import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabaseClient'
 import { getQuiz, submitQuiz } from '@/app/actions/quiz'
-import { getCurrentUser } from '@/app/actions/auth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, ChevronLeft, ChevronRight, Send, AlertCircle, Loader2 } from 'lucide-react'
 
@@ -28,16 +28,28 @@ export default function TakeQuizPage({ params }) {
       try {
         setLoading(true)
         
-        // ✅ Get user from server action (more reliable)
-        const { user: currentUser, error: userError } = await getCurrentUser()
+        // ✅ Get session from Supabase client
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
-        if (userError || !currentUser) {
-          console.error('User error:', userError)
-          setError('Please login to take this quiz')
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          setError('Authentication error. Please login again.')
           setLoading(false)
           return
         }
 
+        if (!session) {
+          console.log('No active session')
+          setError('Please login to take this quiz')
+          setLoading(false)
+          // Redirect to login after delay
+          setTimeout(() => {
+            router.push('/login?redirect=/student/quizzes')
+          }, 2000)
+          return
+        }
+
+        const currentUser = session.user
         console.log('✅ User found:', currentUser.email)
         setUser(currentUser)
 
@@ -68,7 +80,7 @@ export default function TakeQuizPage({ params }) {
       }
     }
     fetchData()
-  }, [quizId])
+  }, [quizId, router])
 
   // Timer
   useEffect(() => {
