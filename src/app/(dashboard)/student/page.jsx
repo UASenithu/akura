@@ -12,12 +12,7 @@ import {
   Flame, Target, GraduationCap, Star,
   Users
 } from 'lucide-react'
-import { 
-  BookOpen, Sparkles, Brain, Zap, 
-  Award, ChevronRight, LogOut,
-  Flame, Target, GraduationCap, Star,
-  Users, BarChart3
-} from 'lucide-react'
+
 
 export default function StudentDashboard() {
   const [user, setUser] = useState(null)
