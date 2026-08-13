@@ -60,13 +60,16 @@ export default function StudentAnalyticsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // ✅ Get user - same as dashboard
         const { data: { user: currentUser } } = await supabase.auth.getUser()
-        setUser(currentUser)
-
+        
         if (!currentUser) {
-          router.push('/login')
+          // Don't redirect, just show login message
+          setLoading(false)
           return
         }
+
+        setUser(currentUser)
 
         // Get gamification stats
         const userStats = await getUserStats(currentUser.id)
@@ -116,7 +119,6 @@ export default function StudentAnalyticsPage() {
           date.setDate(date.getDate() - i)
           const dateStr = date.toISOString().split('T')[0]
           
-          // Count lessons completed on this day
           const { count } = await supabase
             .from('user_progress')
             .select('*', { count: 'exact', head: true })
@@ -140,7 +142,7 @@ export default function StudentAnalyticsPage() {
       }
     }
     fetchData()
-  }, [router])
+  }, [])
 
   // Chart Data: Daily Activity
   const dailyChartData = {
@@ -224,6 +226,27 @@ export default function StudentAnalyticsPage() {
         }
       }
     }
+  }
+
+  // ✅ If no user, show login prompt
+  if (!loading && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4">
+        <div className="text-center max-w-md">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Please Login</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">You need to be logged in to view your analytics.</p>
+          <div className="mt-6 flex flex-col gap-3">
+            <Link href="/login" className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg transition">
+              Login Now
+            </Link>
+            <Link href="/student" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
