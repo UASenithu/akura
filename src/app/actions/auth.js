@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
-// Create a direct admin client with service role
+// Create admin client with service role (bypasses all RLS)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -25,18 +25,18 @@ export async function signUp(formData) {
   const role = formData.get('role') || 'student'
 
   try {
-    // 1. Check if user already exists in auth
-    const { data: existingUsers } = await supabaseAdmin
+    // Check if user already exists in auth
+    const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('email')
       .eq('email', email)
       .maybeSingle()
 
-    if (existingUsers) {
+    if (existingUser) {
       return { error: 'Email already registered. Please login instead.' }
     }
 
-    // 2. Create user in auth
+    // Create user in auth
     const { data, error } = await supabaseServer.auth.signUp({
       email,
       password,
@@ -60,7 +60,7 @@ export async function signUp(formData) {
       return { error: 'Failed to create account. Please try again.' }
     }
 
-    // 3. Insert user into public.users using admin client (bypass RLS)
+    // Insert into public.users
     const { error: insertError } = await supabaseAdmin
       .from('users')
       .upsert({
@@ -75,22 +75,17 @@ export async function signUp(formData) {
 
     if (insertError) {
       console.error('Insert error:', insertError)
-      // Try again with a different approach
-      const { error: retryError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          id: data.user.id,
-          full_name: fullName,
-          email: email,
-          stream: stream,
-          role: role,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-      
-      if (retryError) {
-        console.error('Retry insert error:', retryError)
-      }
+    }
+
+    // ✅ Auto login after signup
+    const { data: loginData, error: loginError } = await supabaseServer.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (loginError) {
+      // If auto-login fails, redirect to login page
+      redirect('/login')
     }
 
     revalidatePath('/')
@@ -106,13 +101,17 @@ export async function signIn(formData) {
   const password = formData.get('password')
   const role = formData.get('role')
 
+  console.log('🔑 Login attempt:', { email, role })
+
   try {
+    // ✅ Try to sign in
     const { data, error } = await supabaseServer.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
+      console.error('❌ Login error:', error.message)
       return { error: error.message }
     }
 
@@ -120,7 +119,9 @@ export async function signIn(formData) {
       return { error: 'User not found' }
     }
 
-    // Get user role from public.users
+    console.log('✅ User authenticated:', data.user.email)
+
+    // ✅ Check if user exists in public.users
     let userRole = 'student'
     let userExists = false
 
@@ -134,17 +135,20 @@ export async function signIn(formData) {
       if (userData) {
         userExists = true
         userRole = userData.role || 'student'
+        console.log('✅ User role from DB:', userRole)
+      } else {
+        console.log('⚠️ User not found in public.users, creating...')
       }
     } catch (err) {
       console.error('User check error:', err)
     }
 
-    // If user doesn't exist in public.users, create them
+    // ✅ If user doesn't exist in public.users, create them
     if (!userExists) {
       const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
       const stream = data.user.user_metadata?.stream || 'Not Set'
       
-      await supabaseAdmin
+      const { error: insertError } = await supabaseAdmin
         .from('users')
         .upsert({
           id: data.user.id,
@@ -155,26 +159,38 @@ export async function signIn(formData) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
+
+      if (insertError) {
+        console.error('Insert error:', insertError)
+      } else {
+        console.log('✅ User created in public.users')
+      }
       userRole = 'student'
     }
 
-    // Check if role matches
+    // ✅ Check if role matches
     if (role !== userRole) {
+      console.error('❌ Role mismatch:', { expected: role, actual: userRole })
       await supabaseServer.auth.signOut()
       return { error: 'Unauthorized role access' }
     }
 
-    // Update last login
-    await supabaseAdmin
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', data.user.id)
+    // ✅ Update last login
+    try {
+      await supabaseAdmin
+        .from('users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', data.user.id)
+    } catch (updateErr) {
+      console.error('Update last_login error:', updateErr)
+    }
 
+    console.log('✅ Login successful, redirecting...')
     revalidatePath('/')
     redirect(role === 'admin' ? '/admin' : '/student')
     
   } catch (error) {
-    console.error('SignIn error:', error)
+    console.error('❌ SignIn error:', error)
     return { error: 'Login failed. Please try again.' }
   }
 }
