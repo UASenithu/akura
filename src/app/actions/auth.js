@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
+// Create a direct admin client with service role
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -24,6 +25,18 @@ export async function signUp(formData) {
   const role = formData.get('role') || 'student'
 
   try {
+    // 1. Check if user already exists in auth
+    const { data: existingUsers } = await supabaseAdmin
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle()
+
+    if (existingUsers) {
+      return { error: 'Email already registered. Please login instead.' }
+    }
+
+    // 2. Create user in auth
     const { data, error } = await supabaseServer.auth.signUp({
       email,
       password,
@@ -37,13 +50,35 @@ export async function signUp(formData) {
     })
 
     if (error) {
+      if (error.message.includes('already registered')) {
+        return { error: 'Email already registered. Please login instead.' }
+      }
       return { error: error.message }
     }
 
-    if (data.user) {
-      await supabaseAdmin
+    if (!data.user) {
+      return { error: 'Failed to create account. Please try again.' }
+    }
+
+    // 3. Insert user into public.users using admin client (bypass RLS)
+    const { error: insertError } = await supabaseAdmin
+      .from('users')
+      .upsert({
+        id: data.user.id,
+        full_name: fullName,
+        email: email,
+        stream: stream,
+        role: role,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+
+    if (insertError) {
+      console.error('Insert error:', insertError)
+      // Try again with a different approach
+      const { error: retryError } = await supabaseAdmin
         .from('users')
-        .upsert({
+        .insert({
           id: data.user.id,
           full_name: fullName,
           email: email,
@@ -52,6 +87,10 @@ export async function signUp(formData) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
+      
+      if (retryError) {
+        console.error('Retry insert error:', retryError)
+      }
     }
 
     revalidatePath('/')
@@ -81,6 +120,7 @@ export async function signIn(formData) {
       return { error: 'User not found' }
     }
 
+    // Get user role from public.users
     let userRole = 'student'
     let userExists = false
 
@@ -99,63 +139,41 @@ export async function signIn(formData) {
       console.error('User check error:', err)
     }
 
+    // If user doesn't exist in public.users, create them
     if (!userExists) {
-      console.log('Creating user in public.users...')
+      const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
+      const stream = data.user.user_metadata?.stream || 'Not Set'
       
-      try {
-        const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
-        const stream = data.user.user_metadata?.stream || 'Not Set'
-        
-        const { error: insertError } = await supabaseAdmin
-          .from('users')
-          .upsert({
-            id: data.user.id,
-            full_name: fullName,
-            email: data.user.email,
-            stream: stream,
-            role: 'student',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-
-        if (insertError) {
-          console.error('Insert error:', insertError)
-          return { error: 'Failed to create user profile: ' + insertError.message }
-        }
-        
-        userRole = 'student'
-        console.log('User created successfully!')
-      } catch (insertErr) {
-        console.error('Insert exception:', insertErr)
-        return { error: 'Failed to create user profile' }
-      }
+      await supabaseAdmin
+        .from('users')
+        .upsert({
+          id: data.user.id,
+          full_name: fullName,
+          email: data.user.email,
+          stream: stream,
+          role: 'student',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+      userRole = 'student'
     }
 
+    // Check if role matches
     if (role !== userRole) {
       await supabaseServer.auth.signOut()
       return { error: 'Unauthorized role access' }
     }
 
-    try {
-      await supabaseAdmin
-        .from('users')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', data.user.id)
-    } catch (updateErr) {
-      console.error('Update last_login error:', updateErr)
-    }
+    // Update last login
+    await supabaseAdmin
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', data.user.id)
 
     revalidatePath('/')
-    
-    // ✅ Use return redirect instead of throw
-    const redirectPath = role === 'admin' ? '/admin' : '/student'
-    redirect(redirectPath)
+    redirect(role === 'admin' ? '/admin' : '/student')
     
   } catch (error) {
-    // ✅ If it's a redirect, let it through
-    if (error?.digest?.includes('NEXT_REDIRECT')) {
-      throw error // Let Next.js handle the redirect
-    }
     console.error('SignIn error:', error)
     return { error: 'Login failed. Please try again.' }
   }
