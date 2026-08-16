@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import PWAInstallButton from "@/components/PWAInstallButton";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,13 +49,14 @@ export const metadata = {
   },
 };
 
-// ✅ Separate viewport export (moved from metadata)
+// ✅ Separate viewport export
 export const viewport = {
   themeColor: "#6366f1",
   width: 'device-width',
   initialScale: 1,
 };
 
+// ✅ ONLY ONE RootLayout function!
 export default function RootLayout({ children }) {
   return (
     <html
@@ -73,6 +75,8 @@ export default function RootLayout({ children }) {
       </head>
       <body className="min-h-full flex flex-col">
         {children}
+        {/* ✅ PWA Install Button */}
+        <PWAInstallButton />
       </body>
     </html>
   );
