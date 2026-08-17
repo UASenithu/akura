@@ -26,31 +26,36 @@ export default function StudentDashboard() {
     badges: []
   })
 
-  // ✅ A/L Stream Subjects Mapping
+  // ✅ A/L Stream Subjects Mapping (Based on Sri Lankan A/L System)
   const streamSubjects = {
     'Biological Science': {
       icon: '🧬',
-      subjects: ['Biology', 'Chemistry', 'Physics', 'Agricultural Science'],
+      coreSubjects: ['Biology', 'Chemistry'],
+      optionalSubjects: ['Physics', 'Agricultural Science'],
       description: 'Medical, Health & Agricultural fields'
     },
     'Physical Science': {
       icon: '⚛️',
-      subjects: ['Combined Mathematics', 'Physics', 'Chemistry', 'ICT'],
+      coreSubjects: ['Combined Mathematics', 'Physics'],
+      optionalSubjects: ['Chemistry', 'ICT'],
       description: 'Engineering, Computing & Technology fields'
     },
     'Technology': {
       icon: '💻',
-      subjects: ['Science for Technology', 'Engineering Technology', 'Bio-Systems Technology', 'ICT', 'Agricultural Science', 'Geography', 'Economics', 'Business Studies', 'Media Studies', 'Art'],
+      coreSubjects: ['Science for Technology'],
+      optionalSubjects: ['Engineering Technology', 'Bio-Systems Technology', 'ICT', 'Agricultural Science', 'Geography', 'Economics', 'Business Studies', 'Media Studies', 'Art'],
       description: 'Technical & Vocational fields'
     },
     'Commerce': {
       icon: '📊',
-      subjects: ['Accounting', 'Business Studies', 'Economics', 'ICT', 'Business Statistics'],
+      coreSubjects: ['Accounting', 'Business Studies', 'Economics'],
+      optionalSubjects: ['ICT', 'Business Statistics'],
       description: 'Business, Accounting & Management fields'
     },
     'Arts': {
       icon: '🎨',
-      subjects: ['Logic', 'Economics', 'Geography', 'Political Science', 'History', 'Sinhala', 'Tamil', 'English', 'French', 'Japanese', 'Chinese', 'Music', 'Dance', 'Drama', 'Art', 'ICT', 'Media Studies'],
+      coreSubjects: ['Logic', 'Economics', 'Geography'],
+      optionalSubjects: ['Political Science', 'History', 'Sinhala', 'Tamil', 'English', 'French', 'Japanese', 'Chinese', 'Music', 'Dance', 'Drama', 'Art', 'ICT', 'Media Studies'],
       description: 'Law, Humanities & Social Sciences fields'
     }
   }
@@ -66,62 +71,47 @@ export default function StudentDashboard() {
         }
 
         // ✅ Get user's stream from metadata
-        let userStreamFull = user?.user_metadata?.stream || ''
-        console.log('📊 Raw stream from metadata:', userStreamFull)
+        const userStreamFull = user?.user_metadata?.stream || ''
+        console.log('📊 Full stream string:', userStreamFull)
         
         let streamName = ''
         
-        // ✅ Try multiple patterns to extract stream name
+        // ✅ Extract stream name
         if (userStreamFull.includes(' - ')) {
           streamName = userStreamFull.split(' - ')[1]
         } else if (userStreamFull.includes('A/L - ')) {
           streamName = userStreamFull.replace('A/L - ', '')
-        } else if (userStreamFull.includes('O/L - ')) {
-          streamName = userStreamFull.replace('O/L - ', '')
         } else {
           streamName = userStreamFull
         }
         
-        // ✅ Trim and clean
-        streamName = streamName.trim()
-        console.log('📊 Cleaned stream name:', streamName)
-        
+        console.log('📊 Extracted stream name:', streamName)
         setUserStream(streamName)
 
-        // ✅ Find matching stream in streamSubjects
-        let matchedStream = null
-        
-        // First, try exact match
-        if (streamSubjects[streamName]) {
-          matchedStream = streamName
-        } else {
-          // Try case-insensitive match
-          const matchKey = Object.keys(streamSubjects).find(
-            key => key.toLowerCase() === streamName.toLowerCase()
-          )
-          if (matchKey) {
-            matchedStream = matchKey
-          } else {
-            // Try partial match
-            const partialMatch = Object.keys(streamSubjects).find(
-              key => streamName.toLowerCase().includes(key.toLowerCase()) || 
-                     key.toLowerCase().includes(streamName.toLowerCase())
-            )
-            if (partialMatch) {
-              matchedStream = partialMatch
-            }
-          }
-        }
-        
-        console.log('✅ Matched stream:', matchedStream)
-
-        if (matchedStream && streamSubjects[matchedStream]) {
-          setUserStream(matchedStream)
-          setUserSubjects(streamSubjects[matchedStream].subjects)
-          console.log('📚 Subjects found:', streamSubjects[matchedStream].subjects)
+        // ✅ Get subjects for user's stream
+        if (streamName && streamSubjects[streamName]) {
+          // ✅ Show ALL subjects for the stream (core + optional)
+          const allSubjects = [
+            ...streamSubjects[streamName].coreSubjects,
+            ...streamSubjects[streamName].optionalSubjects
+          ]
+          setUserSubjects(allSubjects)
+          console.log('📚 Subjects found:', allSubjects)
         } else {
           console.log('⚠️ No subjects found for stream:', streamName)
-          setUserSubjects([])
+          // ✅ Try to match with available streams
+          const matchingStream = Object.keys(streamSubjects).find(
+            s => streamName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(streamName.toLowerCase())
+          )
+          if (matchingStream) {
+            const allSubjects = [
+              ...streamSubjects[matchingStream].coreSubjects,
+              ...streamSubjects[matchingStream].optionalSubjects
+            ]
+            setUserSubjects(allSubjects)
+            setUserStream(matchingStream)
+            console.log('✅ Matched stream:', matchingStream)
+          }
         }
 
         const { data: streamsData } = await supabase
@@ -168,6 +158,7 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       
+      {/* Navbar */}
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -227,6 +218,7 @@ export default function StudentDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         
+        {/* Hero with Stream Info */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 mb-8 shadow-2xl shadow-indigo-500/25">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-10"></div>
           
@@ -273,6 +265,7 @@ export default function StudentDashboard() {
           </div>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
             <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
@@ -315,6 +308,7 @@ export default function StudentDashboard() {
           </motion.div>
         </div>
 
+        {/* ✅ Stream Subjects */}
         {hasSubjects && (
           <div className="mb-8">
             <div className="flex justify-between items-center mb-6">
@@ -383,6 +377,7 @@ export default function StudentDashboard() {
           </div>
         )}
 
+        {/* All A/L Streams */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-2xl font-bold text-slate-800 dark:text-white">All A/L Streams 📚</h3>
@@ -430,6 +425,7 @@ export default function StudentDashboard() {
           </div>
         </div>
 
+        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Link href="/student/quizzes" className="block">
             <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-amber-300 transition">
@@ -492,6 +488,7 @@ export default function StudentDashboard() {
           </Link>
         </div>
 
+        {/* Motivation */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-6 border border-white/20 dark:border-white/5 text-center">
             <div className="text-4xl mb-3 float">🧘</div>
