@@ -5,13 +5,16 @@ import { supabase } from '@/lib/supabaseClient'
 import { signOut } from '@/app/actions/auth'
 import { getUserStats, updateDailyStreak } from '@/app/actions/gamification'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   BookOpen, Sparkles, Brain, Zap, 
   Award, ChevronRight, LogOut,
   Flame, Target, GraduationCap, Star,
-  Users, BarChart3
+  Users, BarChart3, Gift, Trophy, 
+  Rocket, Crown, Medal, Calendar, 
+  Bell, Clock, TrendingUp
 } from 'lucide-react'
+import toast, { Toaster } from 'react-hot-toast'
 
 export default function StudentDashboard() {
   const [user, setUser] = useState(null)
@@ -23,25 +26,90 @@ export default function StudentDashboard() {
     points: 0,
     badges: []
   })
+  const [showStreakToast, setShowStreakToast] = useState(false)
+  const [streakMessage, setStreakMessage] = useState('')
 
-  // ✅ එක useEffect එකක් විතරයි!
+  // ✅ Get streak message
+  const getStreakMessage = (streak) => {
+    if (streak === 0) return 'Start your journey today! 🌱'
+    if (streak === 1) return '🌟 Great start! Keep going!'
+    if (streak >= 2 && streak < 4) return '💪 You\'re building momentum!'
+    if (streak >= 4 && streak < 7) return '🔥 You\'re on fire!'
+    if (streak >= 7 && streak < 14) return '⚡ Amazing streak!'
+    if (streak >= 14 && streak < 30) return '🌟 Incredible dedication!'
+    if (streak >= 30) return '🏆 LEGENDARY STREAK!'
+    return 'Keep learning! 📚'
+  }
+
+  // ✅ Get streak emoji
+  const getStreakEmoji = (streak) => {
+    if (streak === 0) return '💤'
+    if (streak < 3) return '🌱'
+    if (streak < 5) return '💪'
+    if (streak < 7) return '🔥'
+    if (streak < 14) return '⚡'
+    if (streak < 30) return '🌟'
+    return '🏆'
+  }
+
+  // ✅ Get streak badge
+  const getStreakBadge = (streak) => {
+    if (streak >= 30) return { label: '👑 Legend', color: 'from-purple-500 to-pink-500' }
+    if (streak >= 14) return { label: '🌟 Diamond', color: 'from-cyan-500 to-blue-500' }
+    if (streak >= 7) return { label: '🔥 Hot Streak', color: 'from-orange-500 to-red-500' }
+    if (streak >= 3) return { label: '💪 Building', color: 'from-green-500 to-emerald-500' }
+    return null
+  }
+
+  // ✅ Get next badge progress
+  const getNextBadgeProgress = (streak) => {
+    const milestones = [3, 7, 14, 30]
+    for (const milestone of milestones) {
+      if (streak < milestone) {
+        return {
+          current: streak,
+          target: milestone,
+          percentage: (streak / milestone) * 100
+        }
+      }
+    }
+    return { current: streak, target: 30, percentage: 100 }
+  }
+
   useEffect(() => {
     async function fetchData() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
 
-        // ✅ Update streak on load
         if (user) {
-          await updateDailyStreak(user.id)
-        }
+          // ✅ Update streak and get result
+          const result = await updateDailyStreak(user.id)
+          
+          // ✅ Show toast notification if streak changed
+          if (result.streak > 0) {
+            const newStreak = result.streak
+            const message = getStreakMessage(newStreak)
+            setStreakMessage(message)
+            
+            // Show toast with streak update
+            toast.custom((t) => (
+              <motion.div
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                className={`bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl shadow-2xl px-6 py-4 max-w-sm flex items-center gap-4`}
+              >
+                <div className="text-3xl animate-bounce">🔥</div>
+                <div>
+                  <p className="font-bold text-lg">{newStreak} Day Streak!</p>
+                  <p className="text-sm text-white/80">{message}</p>
+                </div>
+              </motion.div>
+            ), { duration: 4000, position: 'top-center' })
+          }
 
-        const { data: streamsData } = await supabase
-          .from('streams')
-          .select('*')
-        setStreams(streamsData || [])
-        
-        if (user) {
+          // ✅ Update stats
           const userStats = await getUserStats(user.id)
           setStats({
             completed: userStats.lessonsCompleted || 0,
@@ -50,6 +118,12 @@ export default function StudentDashboard() {
             badges: userStats.badges || []
           })
         }
+
+        const { data: streamsData } = await supabase
+          .from('streams')
+          .select('*')
+        setStreams(streamsData || [])
+
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
@@ -58,6 +132,12 @@ export default function StudentDashboard() {
     }
     fetchData()
   }, [])
+
+  // ✅ Get streak badge info
+  const streakBadge = getStreakBadge(stats.streak)
+  const nextBadge = getNextBadgeProgress(stats.streak)
+  const streakEmoji = getStreakEmoji(stats.streak)
+  const streakMsg = getStreakMessage(stats.streak)
 
   if (loading) {
     return (
@@ -75,6 +155,9 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      
+      {/* Toaster for notifications */}
+      <Toaster position="top-center" reverseOrder={false} />
       
       {/* Navbar */}
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
@@ -137,7 +220,7 @@ export default function StudentDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         
-        {/* Hero */}
+        {/* Hero Section with Streak Message */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 mb-8 shadow-2xl shadow-indigo-500/25">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-10"></div>
           
@@ -147,12 +230,17 @@ export default function StudentDashboard() {
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs text-white font-medium">
                   🌿 Stress-Free Learning
                 </span>
+                {streakBadge && (
+                  <span className={`px-3 py-1 bg-gradient-to-r ${streakBadge.color} text-white rounded-full text-xs font-medium shadow-lg`}>
+                    {streakBadge.label}
+                  </span>
+                )}
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-white">
                 Welcome back, {user?.user_metadata?.full_name?.split(' ')[0] || 'Student'}! 👋
               </h2>
               <p className="text-indigo-100 mt-2 text-lg">
-                Learn without stress. Master with calm.
+                {streakMsg}
               </p>
               {user?.user_metadata?.stream && (
                 <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl text-white text-sm">
@@ -167,19 +255,26 @@ export default function StudentDashboard() {
                 <p className="text-2xl font-bold text-white">{stats.completed}</p>
                 <p className="text-xs text-indigo-100">Lessons Done</p>
               </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4 text-center min-w-[100px]">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                animate={{ 
+                  scale: stats.streak > 0 ? [1, 1.05, 1] : 1,
+                  transition: { duration: 2, repeat: Infinity }
+                }}
+                className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4 text-center min-w-[100px]"
+              >
                 <p className="text-2xl font-bold text-white flex items-center justify-center gap-1">
-                  🔥 {stats.streak}
+                  {stats.streak > 0 ? '🔥' : '💤'} {stats.streak}
                 </p>
                 <p className="text-xs text-indigo-100">Day Streak</p>
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards with Animations */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
+          <motion.div whileHover={{ y: -4, scale: 1.02 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
             <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
               <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             </div>
@@ -189,17 +284,31 @@ export default function StudentDashboard() {
             </div>
           </motion.div>
           
-          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
+          <motion.div 
+            whileHover={{ y: -4, scale: 1.02 }}
+            animate={{ 
+              scale: stats.streak > 0 ? [1, 1.02, 1] : 1,
+              transition: { duration: 3, repeat: Infinity }
+            }}
+            className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4"
+          >
             <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
               <Flame className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Streak</p>
-              <p className="text-lg font-bold text-slate-800 dark:text-white">{stats.streak} days 🔥</p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">
+                {stats.streak} days {getStreakEmoji(stats.streak)}
+              </p>
+              {streakBadge && (
+                <p className={`text-xs bg-gradient-to-r ${streakBadge.color} text-white px-2 py-0.5 rounded-full inline-block mt-0.5`}>
+                  {streakBadge.label}
+                </p>
+              )}
             </div>
           </motion.div>
           
-          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
+          <motion.div whileHover={{ y: -4, scale: 1.02 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
             <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
               <Star className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             </div>
@@ -209,7 +318,7 @@ export default function StudentDashboard() {
             </div>
           </motion.div>
           
-          <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
+          <motion.div whileHover={{ y: -4, scale: 1.02 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4">
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
               <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
@@ -220,7 +329,35 @@ export default function StudentDashboard() {
           </motion.div>
         </div>
 
-        {/* Badges */}
+        {/* Streak Progress Bar */}
+        {stats.streak > 0 && (
+          <div className="mb-8 glass rounded-2xl p-4 border border-white/20 dark:border-white/5">
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex items-center gap-2">
+                <Gift className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-medium text-slate-700 dark:text-white">
+                  Next Badge: {nextBadge.target} days
+                </span>
+              </div>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {nextBadge.current} / {nextBadge.target}
+              </span>
+            </div>
+            <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${nextBadge.percentage}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+              {Math.ceil(nextBadge.target - nextBadge.current)} days until next badge! 🎯
+            </p>
+          </div>
+        )}
+
+        {/* Badges Display */}
         {stats.badges.length > 0 && (
           <div className="mb-8">
             <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3 flex items-center gap-2">
@@ -229,7 +366,11 @@ export default function StudentDashboard() {
             </h4>
             <div className="flex flex-wrap gap-3">
               {stats.badges.map((badge) => (
-                <motion.div key={badge.id} whileHover={{ scale: 1.1 }} className="glass rounded-xl px-4 py-2 border border-white/20 dark:border-white/5 flex items-center gap-2">
+                <motion.div 
+                  key={badge.id} 
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className="glass rounded-xl px-4 py-2 border border-white/20 dark:border-white/5 flex items-center gap-2"
+                >
                   <span className="text-2xl">{badge.icon}</span>
                   <div>
                     <p className="text-sm font-semibold text-slate-700 dark:text-white">{badge.name}</p>
@@ -283,7 +424,6 @@ export default function StudentDashboard() {
 
         {/* Quick Actions - 4 Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {/* Past Papers Card */}
           <Link href="/student/quizzes" className="block">
             <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-amber-300 transition">
               <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
@@ -299,7 +439,6 @@ export default function StudentDashboard() {
             </motion.div>
           </Link>
 
-          {/* AI Assistant Card */}
           <Link href="/student/ai" className="block">
             <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-emerald-300 transition">
               <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
@@ -315,7 +454,6 @@ export default function StudentDashboard() {
             </motion.div>
           </Link>
 
-          {/* Study Groups Card */}
           <Link href="/student/groups" className="block">
             <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-purple-300 transition">
               <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
@@ -331,7 +469,6 @@ export default function StudentDashboard() {
             </motion.div>
           </Link>
 
-          {/* Analytics Card */}
           <Link href="/student/analytics" className="block">
             <motion.div whileHover={{ y: -4 }} className="glass rounded-2xl p-4 border border-white/20 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:border-blue-300 transition">
               <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
