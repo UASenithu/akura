@@ -56,26 +56,48 @@ export default function StudentDashboard() {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
 
+        console.log('👤 User metadata:', user?.user_metadata)
+        console.log('📊 Stream from metadata:', user?.user_metadata?.stream)
+
         if (user) {
           await updateDailyStreak(user.id)
         }
 
         // ✅ Get user's stream from metadata
         const userStreamFull = user?.user_metadata?.stream || ''
+        console.log('📊 Full stream string:', userStreamFull)
+        
         let streamName = ''
         
-        // ✅ Extract stream name (e.g., "A/L - Physical Science" -> "Physical Science")
+        // ✅ Try multiple patterns to extract stream name
         if (userStreamFull.includes(' - ')) {
           streamName = userStreamFull.split(' - ')[1]
+        } else if (userStreamFull.includes('A/L - ')) {
+          streamName = userStreamFull.replace('A/L - ', '')
+        } else if (userStreamFull.includes('O/L - ')) {
+          streamName = userStreamFull.replace('O/L - ', '')
         } else {
           streamName = userStreamFull
         }
         
+        console.log('📊 Extracted stream name:', streamName)
         setUserStream(streamName)
 
         // ✅ Get subjects for user's stream
         if (streamName && streamSubjects[streamName]) {
           setUserSubjects(streamSubjects[streamName].subjects)
+          console.log('📚 Subjects found:', streamSubjects[streamName].subjects)
+        } else {
+          console.log('⚠️ No subjects found for stream:', streamName)
+          // ✅ If stream not found, try to match with available streams
+          const matchingStream = Object.keys(streamSubjects).find(
+            s => streamName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(streamName.toLowerCase())
+          )
+          if (matchingStream) {
+            setUserSubjects(streamSubjects[matchingStream].subjects)
+            setUserStream(matchingStream)
+            console.log('✅ Matched stream:', matchingStream)
+          }
         }
 
         const { data: streamsData } = await supabase
@@ -116,6 +138,7 @@ export default function StudentDashboard() {
   }
 
   const streamIcon = userStream && streamSubjects[userStream] ? streamSubjects[userStream].icon : '📚'
+  const hasSubjects = userSubjects.length > 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -190,13 +213,18 @@ export default function StudentDashboard() {
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs text-white font-medium flex items-center gap-1">
                   <span>{streamIcon}</span> {userStream || 'A/L Student'}
                 </span>
+                {hasSubjects && (
+                  <span className="px-3 py-1 bg-emerald-500/30 backdrop-blur-sm rounded-full text-xs text-white">
+                    ✅ {userSubjects.length} Subjects
+                  </span>
+                )}
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-white">
                 Welcome back, {user?.user_metadata?.full_name?.split(' ')[0] || 'Student'}! 👋
               </h2>
               <p className="text-indigo-100 mt-2 text-lg">
-                {userSubjects.length > 0 
-                  ? `You're studying ${userSubjects.slice(0, 3).join(', ')}${userSubjects.length > 3 ? '...' : ''}` 
+                {hasSubjects 
+                  ? `You're studying ${userSubjects.slice(0, 3).join(', ')}${userSubjects.length > 3 ? ` and ${userSubjects.length - 3} more` : ''}` 
                   : 'Select your stream to see subjects'}
               </p>
               {user?.user_metadata?.stream && (
@@ -266,7 +294,7 @@ export default function StudentDashboard() {
         </div>
 
         {/* ✅ Stream Subjects - Only for A/L students */}
-        {userSubjects.length > 0 && (
+        {hasSubjects && (
           <div className="mb-8">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">

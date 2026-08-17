@@ -135,6 +135,10 @@ export async function signIn(formData) {
     const userLevel = data.user.user_metadata?.level || 'A/L'
     console.log('📊 User Level:', userLevel)
 
+    // ✅ Get user stream from metadata
+    const userStream = data.user.user_metadata?.stream || ''
+    console.log('📊 User Stream:', userStream)
+
     // Check public.users
     let userRole = 'student'
     
