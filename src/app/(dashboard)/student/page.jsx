@@ -26,27 +26,37 @@ export default function StudentDashboard() {
     badges: []
   })
 
-  // ✅ Stream Subjects Mapping
+  // ✅ A/L Stream Subjects Mapping (Based on Sri Lankan A/L System)
   const streamSubjects = {
     'Biological Science': {
       icon: '🧬',
-      subjects: ['Biology', 'Chemistry', 'Physics', 'Agricultural Science']
+      coreSubjects: ['Biology', 'Chemistry'],
+      optionalSubjects: ['Physics', 'Agricultural Science'],
+      description: 'Medical, Health & Agricultural fields'
     },
     'Physical Science': {
       icon: '⚛️',
-      subjects: ['Combined Mathematics', 'Physics', 'Chemistry', 'ICT']
+      coreSubjects: ['Combined Mathematics', 'Physics'],
+      optionalSubjects: ['Chemistry', 'ICT'],
+      description: 'Engineering, Computing & Technology fields'
     },
     'Technology': {
       icon: '💻',
-      subjects: ['Science for Technology', 'Engineering Technology', 'Bio-Systems Technology', 'ICT', 'Agricultural Science']
+      coreSubjects: ['Science for Technology'],
+      optionalSubjects: ['Engineering Technology', 'Bio-Systems Technology', 'ICT', 'Agricultural Science', 'Geography', 'Economics', 'Business Studies', 'Media Studies', 'Art'],
+      description: 'Technical & Vocational fields'
     },
     'Commerce': {
       icon: '📊',
-      subjects: ['Accounting', 'Business Studies', 'Economics', 'ICT', 'Business Statistics']
+      coreSubjects: ['Accounting', 'Business Studies', 'Economics'],
+      optionalSubjects: ['ICT', 'Business Statistics'],
+      description: 'Business, Accounting & Management fields'
     },
     'Arts': {
       icon: '🎨',
-      subjects: ['Logic', 'Economics', 'Geography', 'History', 'Sinhala', 'Tamil', 'English', 'ICT', 'CMS', 'Dancing', 'Music', 'Drama', 'Art']
+      coreSubjects: ['Logic', 'Economics', 'Geography'],
+      optionalSubjects: ['Political Science', 'History', 'Sinhala', 'Tamil', 'English', 'French', 'Japanese', 'Chinese', 'Music', 'Dance', 'Drama', 'Art', 'ICT', 'Media Studies'],
+      description: 'Law, Humanities & Social Sciences fields'
     }
   }
 
@@ -55,9 +65,6 @@ export default function StudentDashboard() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
-
-        console.log('👤 User metadata:', user?.user_metadata)
-        console.log('📊 Stream from metadata:', user?.user_metadata?.stream)
 
         if (user) {
           await updateDailyStreak(user.id)
@@ -69,13 +76,11 @@ export default function StudentDashboard() {
         
         let streamName = ''
         
-        // ✅ Try multiple patterns to extract stream name
+        // ✅ Extract stream name
         if (userStreamFull.includes(' - ')) {
           streamName = userStreamFull.split(' - ')[1]
         } else if (userStreamFull.includes('A/L - ')) {
           streamName = userStreamFull.replace('A/L - ', '')
-        } else if (userStreamFull.includes('O/L - ')) {
-          streamName = userStreamFull.replace('O/L - ', '')
         } else {
           streamName = userStreamFull
         }
@@ -85,16 +90,25 @@ export default function StudentDashboard() {
 
         // ✅ Get subjects for user's stream
         if (streamName && streamSubjects[streamName]) {
-          setUserSubjects(streamSubjects[streamName].subjects)
-          console.log('📚 Subjects found:', streamSubjects[streamName].subjects)
+          // ✅ Show ALL subjects for the stream (core + optional)
+          const allSubjects = [
+            ...streamSubjects[streamName].coreSubjects,
+            ...streamSubjects[streamName].optionalSubjects
+          ]
+          setUserSubjects(allSubjects)
+          console.log('📚 Subjects found:', allSubjects)
         } else {
           console.log('⚠️ No subjects found for stream:', streamName)
-          // ✅ If stream not found, try to match with available streams
+          // ✅ Try to match with available streams
           const matchingStream = Object.keys(streamSubjects).find(
             s => streamName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(streamName.toLowerCase())
           )
           if (matchingStream) {
-            setUserSubjects(streamSubjects[matchingStream].subjects)
+            const allSubjects = [
+              ...streamSubjects[matchingStream].coreSubjects,
+              ...streamSubjects[matchingStream].optionalSubjects
+            ]
+            setUserSubjects(allSubjects)
             setUserStream(matchingStream)
             console.log('✅ Matched stream:', matchingStream)
           }
@@ -139,6 +153,7 @@ export default function StudentDashboard() {
 
   const streamIcon = userStream && streamSubjects[userStream] ? streamSubjects[userStream].icon : '📚'
   const hasSubjects = userSubjects.length > 0
+  const streamInfo = userStream && streamSubjects[userStream] ? streamSubjects[userStream] : null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -224,7 +239,7 @@ export default function StudentDashboard() {
               </h2>
               <p className="text-indigo-100 mt-2 text-lg">
                 {hasSubjects 
-                  ? `You're studying ${userSubjects.slice(0, 3).join(', ')}${userSubjects.length > 3 ? ` and ${userSubjects.length - 3} more` : ''}` 
+                  ? `${streamInfo?.description || 'Your Stream'} - ${userSubjects.slice(0, 3).join(', ')}${userSubjects.length > 3 ? ` and ${userSubjects.length - 3} more` : ''}`
                   : 'Select your stream to see subjects'}
               </p>
               {user?.user_metadata?.stream && (
@@ -293,13 +308,13 @@ export default function StudentDashboard() {
           </motion.div>
         </div>
 
-        {/* ✅ Stream Subjects - Only for A/L students */}
+        {/* ✅ Stream Subjects */}
         {hasSubjects && (
           <div className="mb-8">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 <span>{streamIcon}</span>
-                Your {userStream} Subjects 📚
+                {userStream} Subjects 📚
               </h3>
               <span className="text-sm text-slate-500 dark:text-slate-400">{userSubjects.length} subjects</span>
             </div>
@@ -331,9 +346,13 @@ export default function StudentDashboard() {
                        subject.includes('Logic') ? '🧠' :
                        subject.includes('Geography') ? '🌍' :
                        subject.includes('History') ? '📜' :
+                       subject.includes('Political') ? '🏛️' :
                        subject.includes('Sinhala') ? '📖' :
                        subject.includes('Tamil') ? '📕' :
                        subject.includes('English') ? '📝' :
+                       subject.includes('French') ? '🇫🇷' :
+                       subject.includes('Japanese') ? '🇯🇵' :
+                       subject.includes('Chinese') ? '🇨🇳' :
                        subject.includes('Dancing') ? '💃' :
                        subject.includes('Music') ? '🎵' :
                        subject.includes('Drama') ? '🎭' :
@@ -357,6 +376,54 @@ export default function StudentDashboard() {
             </div>
           </div>
         )}
+
+        {/* All A/L Streams */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">All A/L Streams 📚</h3>
+            <span className="text-sm text-slate-500 dark:text-slate-400">{streams.length} available</span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {streams.map((stream, index) => (
+              <motion.div
+                key={stream.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className={`group relative overflow-hidden rounded-2xl border shadow-lg hover:shadow-2xl transition-all duration-300 ${
+                  stream.name === userStream 
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <Link href={`/student/stream/${stream.id}`} className="block p-6 relative">
+                  <div className="text-5xl mb-4 float group-hover:scale-110 transition-transform duration-300">
+                    {stream.icon || '📖'}
+                  </div>
+                  <h4 className="text-xl font-bold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
+                    {stream.name}
+                  </h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    {stream.description || 'Start your journey'}
+                  </p>
+                  {stream.name === userStream && (
+                    <span className="inline-block mt-1 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+                      ✅ Your Stream
+                    </span>
+                  )}
+                  <div className="mt-4 flex items-center text-sm font-medium text-indigo-600 dark:text-indigo-400 group-hover:gap-2 transition-all">
+                    <span>View Subjects</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+
+                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-indigo-500/20 rounded-2xl transition-all duration-300 pointer-events-none"></div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">

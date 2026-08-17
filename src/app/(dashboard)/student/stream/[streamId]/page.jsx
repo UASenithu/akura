@@ -15,34 +15,38 @@ export default function StreamSubjectsPage({ params }) {
   const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // ✅ Stream Subjects Mapping
+  // ✅ A/L Stream Subjects Mapping
   const streamSubjects = {
     'Biological Science': {
       icon: '🧬',
-      subjects: ['Biology', 'Chemistry', 'Physics', 'Agricultural Science']
+      subjects: ['Biology', 'Chemistry', 'Physics', 'Agricultural Science'],
+      description: 'Medical, Health & Agricultural fields'
     },
     'Physical Science': {
       icon: '⚛️',
-      subjects: ['Combined Mathematics', 'Physics', 'Chemistry', 'ICT']
+      subjects: ['Combined Mathematics', 'Physics', 'Chemistry', 'ICT'],
+      description: 'Engineering, Computing & Technology fields'
     },
     'Technology': {
       icon: '💻',
-      subjects: ['Science for Technology', 'Engineering Technology', 'Bio-Systems Technology', 'ICT', 'Agricultural Science']
+      subjects: ['Science for Technology', 'Engineering Technology', 'Bio-Systems Technology', 'ICT', 'Agricultural Science', 'Geography', 'Economics', 'Business Studies', 'Media Studies', 'Art'],
+      description: 'Technical & Vocational fields'
     },
     'Commerce': {
       icon: '📊',
-      subjects: ['Accounting', 'Business Studies', 'Economics', 'ICT', 'Business Statistics']
+      subjects: ['Accounting', 'Business Studies', 'Economics', 'ICT', 'Business Statistics'],
+      description: 'Business, Accounting & Management fields'
     },
     'Arts': {
       icon: '🎨',
-      subjects: ['Logic', 'Economics', 'Geography', 'History', 'Sinhala', 'Tamil', 'English', 'ICT', 'CMS', 'Dancing', 'Music', 'Drama', 'Art']
+      subjects: ['Logic', 'Economics', 'Geography', 'Political Science', 'History', 'Sinhala', 'Tamil', 'English', 'French', 'Japanese', 'Chinese', 'Music', 'Dance', 'Drama', 'Art', 'ICT', 'Media Studies'],
+      description: 'Law, Humanities & Social Sciences fields'
     }
   }
 
   useEffect(() => {
     async function fetchData() {
       try {
-        // Get stream details from database
         const { data: streamData, error: streamError } = await supabase
           .from('streams')
           .select('*')
@@ -57,7 +61,6 @@ export default function StreamSubjectsPage({ params }) {
 
         setStream(streamData)
 
-        // Get subjects for this stream from mapping
         const streamName = streamData.name
         const streamDataObj = streamSubjects[streamName]
         
@@ -79,30 +82,19 @@ export default function StreamSubjectsPage({ params }) {
   }, [streamId])
 
   const getSubjectIcon = (subject) => {
-    if (subject.includes('Biology')) return '🧬'
-    if (subject.includes('Chemistry')) return '🧪'
-    if (subject.includes('Physics')) return '⚛️'
-    if (subject.includes('Mathematics') || subject.includes('Maths')) return '📐'
-    if (subject.includes('Accounting')) return '📊'
-    if (subject.includes('Business')) return '💼'
-    if (subject.includes('Economics')) return '📈'
-    if (subject.includes('Science')) return '🔬'
-    if (subject.includes('Technology')) return '💻'
-    if (subject.includes('Engineering')) return '🔧'
-    if (subject.includes('ICT')) return '🖥️'
-    if (subject.includes('Agriculture')) return '🌾'
-    if (subject.includes('Logic')) return '🧠'
-    if (subject.includes('Geography')) return '🌍'
-    if (subject.includes('History')) return '📜'
-    if (subject.includes('Sinhala')) return '📖'
-    if (subject.includes('Tamil')) return '📕'
-    if (subject.includes('English')) return '📝'
-    if (subject.includes('Dancing')) return '💃'
-    if (subject.includes('Music')) return '🎵'
-    if (subject.includes('Drama')) return '🎭'
-    if (subject.includes('Art')) return '🎨'
-    if (subject.includes('Media')) return '📺'
-    return '📚'
+    const icons = {
+      'Biology': '🧬', 'Chemistry': '🧪', 'Physics': '⚛️',
+      'Combined Mathematics': '📐', 'Mathematics': '📐', 'Maths': '📐',
+      'Accounting': '📊', 'Business Studies': '💼', 'Economics': '📈',
+      'Science': '🔬', 'Technology': '💻', 'Engineering': '🔧',
+      'ICT': '🖥️', 'Agricultural Science': '🌾',
+      'Logic': '🧠', 'Geography': '🌍', 'History': '📜',
+      'Political Science': '🏛️', 'Sinhala': '📖', 'Tamil': '📕',
+      'English': '📝', 'French': '🇫🇷', 'Japanese': '🇯🇵',
+      'Chinese': '🇨🇳', 'Music': '🎵', 'Dance': '💃',
+      'Drama': '🎭', 'Art': '🎨', 'Media Studies': '📺'
+    }
+    return icons[subject] || '📚'
   }
 
   if (loading) {
@@ -133,7 +125,6 @@ export default function StreamSubjectsPage({ params }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       
-      {/* Navbar */}
       <nav className="glass sticky top-0 z-50 border-b border-white/20 dark:border-white/5 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -156,7 +147,6 @@ export default function StreamSubjectsPage({ params }) {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         
-        {/* Hero */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 mb-8 shadow-2xl shadow-indigo-500/25">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-10"></div>
           
@@ -166,12 +156,11 @@ export default function StreamSubjectsPage({ params }) {
               {stream.name}
             </h2>
             <p className="text-indigo-100 mt-2 text-lg">
-              {stream.description || 'Choose a subject to start learning'}
+              {streamSubjects[stream.name]?.description || 'Choose a subject to start learning'}
             </p>
           </div>
         </div>
 
-        {/* Subjects Grid */}
         {subjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {subjects.map((subject, index) => (
