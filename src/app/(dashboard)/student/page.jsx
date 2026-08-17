@@ -1,9 +1,9 @@
 'use client'
-import { getUserStats, updateDailyStreak } from '@/app/actions/gamification'
+
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { signOut } from '@/app/actions/auth'
-import { getUserStats } from '@/app/actions/gamification'
+import { getUserStats, updateDailyStreak } from '@/app/actions/gamification'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
@@ -24,45 +24,17 @@ export default function StudentDashboard() {
     badges: []
   })
 
-  useEffect(() => {
-  async function fetchData() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-
-      // ✅ Update streak on load
-      if (user) {
-        await updateDailyStreak(user.id)
-      }
-
-      const { data: streamsData } = await supabase
-        .from('streams')
-        .select('*')
-      setStreams(streamsData || [])
-      
-      if (user) {
-        const userStats = await getUserStats(user.id)
-        setStats({
-          completed: userStats.lessonsCompleted || 0,
-          streak: userStats.streak || 0,
-          points: userStats.points || 0,
-          badges: userStats.badges || []
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-  fetchData()
-}, [])
-
+  // ✅ එක useEffect එකක් විතරයි!
   useEffect(() => {
     async function fetchData() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
+
+        // ✅ Update streak on load
+        if (user) {
+          await updateDailyStreak(user.id)
+        }
 
         const { data: streamsData } = await supabase
           .from('streams')
