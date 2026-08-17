@@ -23,9 +23,8 @@ export async function signUp(formData) {
   const stream = formData.get('stream')
   const role = formData.get('role') || 'student'
 
-  console.log('📝 SignUp attempt:', { email, fullName, stream, role })
-
   try {
+    // 1. Create user in auth
     const { data, error } = await supabaseServer.auth.signUp({
       email,
       password,
@@ -39,7 +38,7 @@ export async function signUp(formData) {
     })
 
     if (error) {
-      console.error('❌ SignUp error:', error.message)
+      console.error('SignUp error:', error.message)
       return { error: error.message }
     }
 
@@ -47,9 +46,7 @@ export async function signUp(formData) {
       return { error: 'Failed to create account' }
     }
 
-    console.log('✅ User created in auth:', data.user.id)
-
-    // Insert into public.users
+    // 2. Insert into public.users
     const { error: insertError } = await supabaseAdmin
       .from('users')
       .upsert({
@@ -63,30 +60,30 @@ export async function signUp(formData) {
       })
 
     if (insertError) {
-      console.error('❌ Insert error:', insertError.message)
-    } else {
-      console.log('✅ User inserted into public.users')
+      console.error('Insert error:', insertError.message)
     }
 
-    // Auto-login
+    // ✅ 3. Auto-login after signup (මේක තමයි වැදගත්!)
     const { data: loginData, error: loginError } = await supabaseServer.auth.signInWithPassword({
       email,
       password,
     })
 
     if (loginError) {
-      console.error('❌ Auto-login error:', loginError.message)
+      console.error('Auto-login error:', loginError.message)
+      // If auto-login fails, redirect to login page
       redirect('/login')
     }
 
-    console.log('✅ Auto-login successful!')
+    console.log('✅ Signup and auto-login successful!')
+
     revalidatePath('/')
     redirect(role === 'admin' ? '/admin' : '/student')
   } catch (error) {
     if (error?.digest?.includes('NEXT_REDIRECT')) {
       throw error
     }
-    console.error('❌ SignUp error:', error)
+    console.error('SignUp error:', error)
     return { error: error.message }
   }
 }
@@ -96,99 +93,68 @@ export async function signIn(formData) {
   const password = formData.get('password')
   const role = formData.get('role')
 
-  console.log('🔑 ===== LOGIN ATTEMPT =====')
-  console.log('📧 Email:', email)
-  console.log('👤 Role:', role)
-  console.log('🔑 Password length:', password?.length || 0)
+  console.log('🔑 Login attempt:', { email, role })
 
   try {
-    // ✅ Step 1: Try to sign in
-    console.log('🔄 Attempting signIn...')
     const { data, error } = await supabaseServer.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
-      console.error('❌ AUTH ERROR:', error.message)
-      console.error('❌ Error code:', error.status)
+      console.error('❌ Auth error:', error.message)
       return { error: error.message }
     }
 
     if (!data.user) {
-      console.error('❌ No user returned')
       return { error: 'User not found' }
     }
 
     console.log('✅ User authenticated:', data.user.email)
-    console.log('✅ User ID:', data.user.id)
 
-    // ✅ Step 2: Check public.users
-    console.log('🔄 Checking public.users...')
+    // Get or create user in public.users
     let userRole = 'student'
     
-    try {
-      const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', data.user.id)
+      .maybeSingle()
+
+    if (userData) {
+      userRole = userData.role || 'student'
+    } else {
+      // Create user if missing
+      const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
+      const stream = data.user.user_metadata?.stream || 'Not Set'
+      
+      await supabaseAdmin
         .from('users')
-        .select('role, id, email')
-        .eq('id', data.user.id)
-        .maybeSingle()
-
-      if (userError) {
-        console.error('❌ User fetch error:', userError.message)
-      }
-
-      if (userData) {
-        console.log('✅ User found in public.users:', userData)
-        userRole = userData.role || 'student'
-      } else {
-        console.log('⚠️ User NOT in public.users, creating...')
-        const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
-        const stream = data.user.user_metadata?.stream || 'Not Set'
-        
-        const { error: insertError } = await supabaseAdmin
-          .from('users')
-          .upsert({
-            id: data.user.id,
-            full_name: fullName,
-            email: data.user.email,
-            stream: stream,
-            role: 'student',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-
-        if (insertError) {
-          console.error('❌ Insert error:', insertError.message)
-        } else {
-          console.log('✅ User created in public.users')
-        }
-        userRole = 'student'
-      }
-    } catch (err) {
-      console.error('❌ User check error:', err)
+        .upsert({
+          id: data.user.id,
+          full_name: fullName,
+          email: data.user.email,
+          stream: stream,
+          role: 'student',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+      userRole = 'student'
     }
 
-    // ✅ Step 3: Check role
-    console.log('🔄 Checking role... Expected:', role, 'Actual:', userRole)
+    // Check role
     if (role !== userRole) {
-      console.error('❌ Role mismatch!')
       await supabaseServer.auth.signOut()
       return { error: 'Unauthorized role access' }
     }
 
-    // ✅ Step 4: Update last login
-    try {
-      await supabaseAdmin
-        .from('users')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', data.user.id)
-      console.log('✅ Last login updated')
-    } catch (updateErr) {
-      console.error('Update error:', updateErr)
-    }
+    // Update last login
+    await supabaseAdmin
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', data.user.id)
 
-    console.log('✅ ✅ ✅ LOGIN SUCCESSFUL! Redirecting...')
+    console.log('✅ Login successful!')
     revalidatePath('/')
     redirect(role === 'admin' ? '/admin' : '/student')
     
