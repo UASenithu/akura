@@ -47,6 +47,7 @@ export default function StreamSubjectsPage({ params }) {
   useEffect(() => {
     async function fetchData() {
       try {
+        // Get stream details from database
         const { data: streamData, error: streamError } = await supabase
           .from('streams')
           .select('*')
@@ -61,6 +62,7 @@ export default function StreamSubjectsPage({ params }) {
 
         setStream(streamData)
 
+        // Get subjects for this stream from mapping
         const streamName = streamData.name
         const streamDataObj = streamSubjects[streamName]
         
@@ -122,6 +124,8 @@ export default function StreamSubjectsPage({ params }) {
     )
   }
 
+  const streamIcon = streamSubjects[stream.name]?.icon || '📚'
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       
@@ -133,7 +137,7 @@ export default function StreamSubjectsPage({ params }) {
             </button>
             <div>
               <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <span className="text-3xl">{stream.icon || '📚'}</span>
+                <span className="text-3xl">{streamIcon}</span>
                 {stream.name}
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
@@ -151,7 +155,7 @@ export default function StreamSubjectsPage({ params }) {
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-10"></div>
           
           <div className="relative">
-            <div className="text-6xl mb-4">{stream.icon || '📚'}</div>
+            <div className="text-6xl mb-4">{streamIcon}</div>
             <h2 className="text-3xl md:text-4xl font-bold text-white">
               {stream.name}
             </h2>
