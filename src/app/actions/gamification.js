@@ -3,33 +3,46 @@
 import { supabaseServer } from '@/lib/supabaseServer'
 import { revalidatePath } from 'next/cache'
 
-// Award points for completing a lesson
 export async function awardPoints(userId, points = 10) {
   try {
-    const { data: user } = await supabaseServer
+    // Get current user data
+    const { data: user, error: userError } = await supabaseServer
       .from('users')
       .select('total_points, study_streak, last_study_date')
       .eq('id', userId)
       .single()
 
+    if (userError) {
+      console.error('Error fetching user:', userError)
+      return { error: userError.message }
+    }
+
     const today = new Date().toISOString().split('T')[0]
     const lastStudy = user?.last_study_date
     let newStreak = user?.study_streak || 0
 
+    // ✅ Calculate streak correctly
     if (lastStudy) {
-      const lastDate = new Date(lastStudy)
-      const diffDays = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24))
+      const lastDate = new Date(lastStudy).toISOString().split('T')[0]
+      const diffDays = Math.floor((new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24))
       
-      if (diffDays === 1) {
-        newStreak += 1
+      if (diffDays === 0) {
+        // Same day - no change
+        newStreak = user?.study_streak || 0
+      } else if (diffDays === 1) {
+        // Next day - increase streak
+        newStreak = (user?.study_streak || 0) + 1
       } else if (diffDays > 1) {
+        // Missed a day - reset streak
         newStreak = 1
       }
     } else {
+      // First time studying
       newStreak = 1
     }
 
-    const { error } = await supabaseServer
+    // Update user
+    const { error: updateError } = await supabaseServer
       .from('users')
       .update({
         total_points: (user?.total_points || 0) + points,
@@ -38,10 +51,12 @@ export async function awardPoints(userId, points = 10) {
       })
       .eq('id', userId)
 
-    if (error) {
-      return { error: error.message }
+    if (updateError) {
+      console.error('Error updating user:', updateError)
+      return { error: updateError.message }
     }
 
+    // Check badges
     await checkBadges(userId)
     revalidatePath('/student')
     
@@ -135,9 +150,27 @@ export async function getUserStats(userId) {
       .eq('user_id', userId)
       .eq('completed', true)
 
+    // ✅ Calculate today's streak properly
+    let currentStreak = user?.study_streak || 0
+    const today = new Date().toISOString().split('T')[0]
+    const lastStudy = user?.last_study_date
+
+    if (lastStudy) {
+      const lastDate = new Date(lastStudy).toISOString().split('T')[0]
+      const diffDays = Math.floor((new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24))
+      
+      // If user hasn't studied today and missed a day, streak should be 0
+      if (diffDays > 1) {
+        currentStreak = 0
+      } else if (diffDays === 0) {
+        // Studied today - keep streak
+        currentStreak = user?.study_streak || 0
+      }
+    }
+
     return {
       points: user?.total_points || 0,
-      streak: user?.study_streak || 0,
+      streak: currentStreak,
       lastStudyDate: user?.last_study_date,
       badges: badges?.map(b => b.badges) || [],
       lessonsCompleted: lessonsCompleted || 0
@@ -151,5 +184,59 @@ export async function getUserStats(userId) {
       badges: [],
       lessonsCompleted: 0
     }
+  }
+}
+
+// ✅ New function to update streak daily
+export async function updateDailyStreak(userId) {
+  try {
+    const { data: user } = await supabaseServer
+      .from('users')
+      .select('study_streak, last_study_date')
+      .eq('id', userId)
+      .single()
+
+    if (!user) return { error: 'User not found' }
+
+    const today = new Date().toISOString().split('T')[0]
+    const lastStudy = user?.last_study_date
+    let newStreak = user?.study_streak || 0
+
+    if (lastStudy) {
+      const lastDate = new Date(lastStudy).toISOString().split('T')[0]
+      const diffDays = Math.floor((new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24))
+      
+      if (diffDays === 0) {
+        // Same day - no change
+        newStreak = user?.study_streak || 0
+      } else if (diffDays === 1) {
+        // Next day - increase streak
+        newStreak = (user?.study_streak || 0) + 1
+      } else if (diffDays > 1) {
+        // Missed a day - reset streak
+        newStreak = 0
+      }
+    } else {
+      newStreak = 1
+    }
+
+    // Update streak
+    const { error } = await supabaseServer
+      .from('users')
+      .update({
+        study_streak: newStreak,
+        last_study_date: today
+      })
+      .eq('id', userId)
+
+    if (error) {
+      console.error('Error updating streak:', error)
+      return { error: error.message }
+    }
+
+    return { streak: newStreak }
+  } catch (error) {
+    console.error('Error in updateDailyStreak:', error)
+    return { error: error.message }
   }
 }
