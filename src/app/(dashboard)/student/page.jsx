@@ -26,38 +26,59 @@ export default function StudentDashboard() {
     badges: []
   })
 
-  // ✅ A/L Stream Subjects Mapping (Based on Sri Lankan A/L System)
+  // ✅ A/L Stream Subjects Mapping
   const streamSubjects = {
     'Biological Science': {
       icon: '🧬',
-      coreSubjects: ['Biology', 'Chemistry'],
-      optionalSubjects: ['Physics', 'Agricultural Science'],
+      subjects: ['Biology', 'Chemistry', 'Physics', 'Agricultural Science'],
       description: 'Medical, Health & Agricultural fields'
     },
     'Physical Science': {
       icon: '⚛️',
-      coreSubjects: ['Combined Mathematics', 'Physics'],
-      optionalSubjects: ['Chemistry', 'ICT'],
+      subjects: ['Combined Mathematics', 'Physics', 'Chemistry', 'ICT'],
       description: 'Engineering, Computing & Technology fields'
     },
     'Technology': {
       icon: '💻',
-      coreSubjects: ['Science for Technology'],
-      optionalSubjects: ['Engineering Technology', 'Bio-Systems Technology', 'ICT', 'Agricultural Science', 'Geography', 'Economics', 'Business Studies', 'Media Studies', 'Art'],
+      subjects: ['Science for Technology', 'Engineering Technology', 'Bio-Systems Technology', 'ICT', 'Agricultural Science', 'Geography', 'Economics', 'Business Studies', 'Media Studies', 'Art'],
       description: 'Technical & Vocational fields'
     },
     'Commerce': {
       icon: '📊',
-      coreSubjects: ['Accounting', 'Business Studies', 'Economics'],
-      optionalSubjects: ['ICT', 'Business Statistics'],
+      subjects: ['Accounting', 'Business Studies', 'Economics', 'ICT', 'Business Statistics'],
       description: 'Business, Accounting & Management fields'
     },
     'Arts': {
       icon: '🎨',
-      coreSubjects: ['Logic', 'Economics', 'Geography'],
-      optionalSubjects: ['Political Science', 'History', 'Sinhala', 'Tamil', 'English', 'French', 'Japanese', 'Chinese', 'Music', 'Dance', 'Drama', 'Art', 'ICT', 'Media Studies'],
+      subjects: ['Logic', 'Economics', 'Geography', 'Political Science', 'History', 'Sinhala', 'Tamil', 'English', 'French', 'Japanese', 'Chinese', 'Music', 'Dance', 'Drama', 'Art', 'ICT', 'Media Studies'],
       description: 'Law, Humanities & Social Sciences fields'
     }
+  }
+
+  // ✅ Normalize stream names
+  const normalizeStreamName = (name) => {
+    if (!name) return ''
+    
+    // Remove "A/L - " or "O/L - " prefix
+    let cleaned = name.replace(/^(A\/L|O\/L)\s*-\s*/, '')
+    
+    // Trim extra spaces
+    cleaned = cleaned.trim()
+    
+    // Find matching stream
+    const matchingKey = Object.keys(streamSubjects).find(
+      key => key.toLowerCase() === cleaned.toLowerCase()
+    )
+    
+    if (matchingKey) return matchingKey
+    
+    // Try partial match
+    const partialMatch = Object.keys(streamSubjects).find(
+      key => cleaned.toLowerCase().includes(key.toLowerCase()) || 
+             key.toLowerCase().includes(cleaned.toLowerCase())
+    )
+    
+    return partialMatch || cleaned
   }
 
   useEffect(() => {
@@ -71,47 +92,22 @@ export default function StudentDashboard() {
         }
 
         // ✅ Get user's stream from metadata
-        const userStreamFull = user?.user_metadata?.stream || ''
-        console.log('📊 Full stream string:', userStreamFull)
+        const rawStream = user?.user_metadata?.stream || ''
+        console.log('🔍 Raw stream:', rawStream)
         
-        let streamName = ''
+        // ✅ Normalize the stream name
+        const normalizedStream = normalizeStreamName(rawStream)
+        console.log('🔍 Normalized stream:', normalizedStream)
         
-        // ✅ Extract stream name
-        if (userStreamFull.includes(' - ')) {
-          streamName = userStreamFull.split(' - ')[1]
-        } else if (userStreamFull.includes('A/L - ')) {
-          streamName = userStreamFull.replace('A/L - ', '')
-        } else {
-          streamName = userStreamFull
-        }
-        
-        console.log('📊 Extracted stream name:', streamName)
-        setUserStream(streamName)
+        setUserStream(normalizedStream)
 
-        // ✅ Get subjects for user's stream
-        if (streamName && streamSubjects[streamName]) {
-          // ✅ Show ALL subjects for the stream (core + optional)
-          const allSubjects = [
-            ...streamSubjects[streamName].coreSubjects,
-            ...streamSubjects[streamName].optionalSubjects
-          ]
-          setUserSubjects(allSubjects)
-          console.log('📚 Subjects found:', allSubjects)
+        // ✅ Get subjects for the normalized stream
+        if (normalizedStream && streamSubjects[normalizedStream]) {
+          setUserSubjects(streamSubjects[normalizedStream].subjects)
+          console.log('📚 Subjects:', streamSubjects[normalizedStream].subjects)
         } else {
-          console.log('⚠️ No subjects found for stream:', streamName)
-          // ✅ Try to match with available streams
-          const matchingStream = Object.keys(streamSubjects).find(
-            s => streamName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(streamName.toLowerCase())
-          )
-          if (matchingStream) {
-            const allSubjects = [
-              ...streamSubjects[matchingStream].coreSubjects,
-              ...streamSubjects[matchingStream].optionalSubjects
-            ]
-            setUserSubjects(allSubjects)
-            setUserStream(matchingStream)
-            console.log('✅ Matched stream:', matchingStream)
-          }
+          console.log('⚠️ No match found for:', normalizedStream)
+          setUserSubjects([])
         }
 
         const { data: streamsData } = await supabase
@@ -218,7 +214,7 @@ export default function StudentDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         
-        {/* Hero with Stream Info */}
+        {/* Hero */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 mb-8 shadow-2xl shadow-indigo-500/25">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-10"></div>
           
@@ -242,12 +238,6 @@ export default function StudentDashboard() {
                   ? `${streamInfo?.description || 'Your Stream'} - ${userSubjects.slice(0, 3).join(', ')}${userSubjects.length > 3 ? ` and ${userSubjects.length - 3} more` : ''}`
                   : 'Select your stream to see subjects'}
               </p>
-              {user?.user_metadata?.stream && (
-                <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl text-white text-sm">
-                  <GraduationCap className="w-4 h-4" />
-                  {user.user_metadata.stream}
-                </div>
-              )}
             </div>
             
             <div className="flex flex-wrap gap-4">
@@ -308,76 +298,53 @@ export default function StudentDashboard() {
           </motion.div>
         </div>
 
-        {/* ✅ Stream Subjects */}
-        {hasSubjects && (
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <span>{streamIcon}</span>
-                {userStream} Subjects 📚
-              </h3>
-              <span className="text-sm text-slate-500 dark:text-slate-400">{userSubjects.length} subjects</span>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {userSubjects.map((subject, index) => (
-                <motion.div
-                  key={subject}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ y: -8, scale: 1.02 }}
-                  className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-2xl transition-all duration-300"
-                >
-                  <Link href={`/student/subject/${subject.toLowerCase().replace(/\s+/g, '-')}`} className="block p-6 relative">
-                    <div className="text-4xl mb-4 float group-hover:scale-110 transition-transform duration-300">
-                      {subject.includes('Biology') ? '🧬' :
-                       subject.includes('Chemistry') ? '🧪' :
-                       subject.includes('Physics') ? '⚛️' :
-                       subject.includes('Mathematics') || subject.includes('Maths') ? '📐' :
-                       subject.includes('Accounting') ? '📊' :
-                       subject.includes('Business') ? '💼' :
-                       subject.includes('Economics') ? '📈' :
-                       subject.includes('Science') ? '🔬' :
-                       subject.includes('Technology') ? '💻' :
-                       subject.includes('Engineering') ? '🔧' :
-                       subject.includes('ICT') ? '🖥️' :
-                       subject.includes('Agriculture') ? '🌾' :
-                       subject.includes('Logic') ? '🧠' :
-                       subject.includes('Geography') ? '🌍' :
-                       subject.includes('History') ? '📜' :
-                       subject.includes('Political') ? '🏛️' :
-                       subject.includes('Sinhala') ? '📖' :
-                       subject.includes('Tamil') ? '📕' :
-                       subject.includes('English') ? '📝' :
-                       subject.includes('French') ? '🇫🇷' :
-                       subject.includes('Japanese') ? '🇯🇵' :
-                       subject.includes('Chinese') ? '🇨🇳' :
-                       subject.includes('Dancing') ? '💃' :
-                       subject.includes('Music') ? '🎵' :
-                       subject.includes('Drama') ? '🎭' :
-                       subject.includes('Art') ? '🎨' :
-                       subject.includes('Media') ? '📺' :
-                       '📚'}
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
-                      {subject}
-                    </h4>
-                    
-                    <div className="mt-4 flex items-center text-sm font-medium text-indigo-600 dark:text-indigo-400 group-hover:gap-2 transition-all">
-                      <span>Explore</span>
-                      <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-
-                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-indigo-500/20 rounded-2xl transition-all duration-300 pointer-events-none"></div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+        {/* All A/L Streams */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">All A/L Streams 📚</h3>
+            <span className="text-sm text-slate-500 dark:text-slate-400">{streams.length} available</span>
           </div>
-        )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {streams.map((stream, index) => (
+              <motion.div
+                key={stream.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className={`group relative overflow-hidden rounded-2xl border shadow-lg hover:shadow-2xl transition-all duration-300 ${
+                  stream.name === userStream 
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <Link href={`/student/stream/${stream.id}`} className="block p-6 relative">
+                  <div className="text-5xl mb-4 float group-hover:scale-110 transition-transform duration-300">
+                    {stream.icon || '📖'}
+                  </div>
+                  <h4 className="text-xl font-bold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
+                    {stream.name}
+                  </h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    {stream.description || 'Start your journey'}
+                  </p>
+                  {stream.name === userStream && (
+                    <span className="inline-block mt-1 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+                      ✅ Your Stream
+                    </span>
+                  )}
+                  <div className="mt-4 flex items-center text-sm font-medium text-indigo-600 dark:text-indigo-400 group-hover:gap-2 transition-all">
+                    <span>View Subjects</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
 
-
+                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-indigo-500/20 rounded-2xl transition-all duration-300 pointer-events-none"></div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
