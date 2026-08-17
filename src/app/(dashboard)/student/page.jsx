@@ -358,51 +358,6 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* All A/L Streams */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">All A/L Streams 📚</h3>
-            <span className="text-sm text-slate-500 dark:text-slate-400">{streams.length} available</span>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {streams.map((stream, index) => (
-              <motion.div
-                key={stream.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -8, scale: 1.02 }}
-                className={`group relative overflow-hidden rounded-2xl border shadow-lg hover:shadow-2xl transition-all duration-300 ${
-                  stream.name === userStream 
-                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
-                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <Link href={`/student/${stream.id}`} className="block p-6 relative">
-                  <div className="text-5xl mb-4 float group-hover:scale-110 transition-transform duration-300">
-                    {stream.icon || '📖'}
-                  </div>
-                  <h4 className="text-xl font-bold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
-                    {stream.name}
-                  </h4>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    {stream.description || 'Start your journey'}
-                    {stream.name === userStream && ' ✅ Your Stream'}
-                  </p>
-                  
-                  <div className="mt-4 flex items-center text-sm font-medium text-indigo-600 dark:text-indigo-400 group-hover:gap-2 transition-all">
-                    <span>Explore</span>
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
-
-                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-indigo-500/20 rounded-2xl transition-all duration-300 pointer-events-none"></div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Link href="/student/quizzes" className="block">
