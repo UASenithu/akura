@@ -49,10 +49,12 @@ export default function SignUpPage() {
     event.preventDefault()
     const formData = new FormData(event.target)
     
+    // ✅ Get values from form
     const level = formData.get('level')
     let stream = formData.get('stream')
     let subjects = formData.get('subjects') || ''
     
+    // ✅ Set stream and subjects based on level
     if (level === 'O/L') {
       stream = 'O/L - General'
       subjects = 'O/L Subjects'
@@ -64,7 +66,7 @@ export default function SignUpPage() {
       stream = `${level} - ${stream}`
     }
     
-    // Add level to form data
+    // ✅ Add ALL data to formData (only once!)
     formData.append('level', level)
     formData.append('stream', stream)
     formData.append('subjects', subjects)

@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [role, setRole] = useState('student')
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [userLevel, setUserLevel] = useState('') // ✅ Add this state
 
   useEffect(() => {
     setMounted(true)
@@ -24,6 +25,7 @@ export default function LoginPage() {
     event.preventDefault()
     setIsLoading(true)
     setError('')
+    setUserLevel('') // ✅ Reset level
     
     const formData = new FormData(event.target)
     formData.append('role', role)
@@ -33,6 +35,12 @@ export default function LoginPage() {
       if (result?.error) {
         setError(result.error)
         setIsLoading(false)
+      } else if (result?.level) {
+        // ✅ Show loading state while redirecting
+        setUserLevel(result.level)
+        console.log('🔄 Redirecting to:', result.level === 'O/L' ? 'O/L Dashboard' : 'A/L Dashboard')
+        // The redirect is handled in the action
+        // This just shows the loading state
       }
     } catch (err) {
       setError('Something went wrong. Please try again.')
@@ -151,6 +159,18 @@ export default function LoginPage() {
               </div>
             </motion.div>
 
+            {/* ✅ Show redirecting state */}
+            {userLevel && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-sm flex items-center gap-2"
+              >
+                <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                Redirecting to {userLevel === 'O/L' ? 'O/L' : 'A/L'} Dashboard...
+              </motion.div>
+            )}
+
             <AnimatePresence>
               {error && (
                 <motion.div
@@ -168,7 +188,7 @@ export default function LoginPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !!userLevel}
               className="w-full py-3.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-medium rounded-xl transition shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 disabled:opacity-70 flex items-center justify-center gap-2"
             >
               {isLoading ? (

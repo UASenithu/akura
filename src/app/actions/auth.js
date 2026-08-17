@@ -87,7 +87,15 @@ export async function signUp(formData) {
 
     console.log('✅ Auto-login successful!')
     revalidatePath('/')
-    redirect(role === 'admin' ? '/admin' : '/student')
+    
+    // ✅ Redirect based on level
+    if (role === 'admin') {
+      redirect('/admin')
+    } else if (level === 'O/L') {
+      redirect('/student/ol-dashboard')
+    } else {
+      redirect('/student')  // A/L default
+    }
   } catch (error) {
     if (error?.digest?.includes('NEXT_REDIRECT')) {
       throw error
@@ -123,7 +131,7 @@ export async function signIn(formData) {
 
     console.log('✅ User authenticated:', data.user.email)
 
-    // Get user level from metadata
+    // ✅ Get user level from metadata
     const userLevel = data.user.user_metadata?.level || 'A/L'
     console.log('📊 User Level:', userLevel)
 
