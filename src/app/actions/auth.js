@@ -5,7 +5,6 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
-// Create admin client with service role
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -24,8 +23,9 @@ export async function signUp(formData) {
   const stream = formData.get('stream')
   const role = formData.get('role') || 'student'
 
+  console.log('📝 SignUp attempt:', { email, fullName, stream, role })
+
   try {
-    // Create user in auth
     const { data, error } = await supabaseServer.auth.signUp({
       email,
       password,
@@ -39,13 +39,15 @@ export async function signUp(formData) {
     })
 
     if (error) {
-      console.error('SignUp auth error:', error.message)
+      console.error('❌ SignUp error:', error.message)
       return { error: error.message }
     }
 
     if (!data.user) {
       return { error: 'Failed to create account' }
     }
+
+    console.log('✅ User created in auth:', data.user.id)
 
     // Insert into public.users
     const { error: insertError } = await supabaseAdmin
@@ -61,13 +63,30 @@ export async function signUp(formData) {
       })
 
     if (insertError) {
-      console.error('Insert error:', insertError.message)
+      console.error('❌ Insert error:', insertError.message)
+    } else {
+      console.log('✅ User inserted into public.users')
     }
 
+    // Auto-login
+    const { data: loginData, error: loginError } = await supabaseServer.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (loginError) {
+      console.error('❌ Auto-login error:', loginError.message)
+      redirect('/login')
+    }
+
+    console.log('✅ Auto-login successful!')
     revalidatePath('/')
     redirect(role === 'admin' ? '/admin' : '/student')
   } catch (error) {
-    console.error('SignUp error:', error)
+    if (error?.digest?.includes('NEXT_REDIRECT')) {
+      throw error
+    }
+    console.error('❌ SignUp error:', error)
     return { error: error.message }
   }
 }
@@ -77,63 +96,53 @@ export async function signIn(formData) {
   const password = formData.get('password')
   const role = formData.get('role')
 
-  console.log('🔑 Login attempt:', { email, role })
+  console.log('🔑 ===== LOGIN ATTEMPT =====')
+  console.log('📧 Email:', email)
+  console.log('👤 Role:', role)
+  console.log('🔑 Password length:', password?.length || 0)
 
   try {
     // ✅ Step 1: Try to sign in
+    console.log('🔄 Attempting signIn...')
     const { data, error } = await supabaseServer.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
-      console.error('❌ Auth error:', error.message)
-      
-      // If user doesn't exist, try to find them in auth.users
-      if (error.message.includes('Invalid login credentials')) {
-        // Check if user exists in auth.users
-        const { data: userList } = await supabaseAdmin
-          .from('auth.users')
-          .select('email')
-          .eq('email', email)
-          .maybeSingle()
-        
-        if (!userList) {
-          return { error: 'User not found. Please sign up first.' }
-        } else {
-          return { error: 'Invalid password. Please try again.' }
-        }
-      }
-      
+      console.error('❌ AUTH ERROR:', error.message)
+      console.error('❌ Error code:', error.status)
       return { error: error.message }
     }
 
     if (!data.user) {
+      console.error('❌ No user returned')
       return { error: 'User not found' }
     }
 
     console.log('✅ User authenticated:', data.user.email)
+    console.log('✅ User ID:', data.user.id)
 
-    // ✅ Step 2: Get or create user in public.users
+    // ✅ Step 2: Check public.users
+    console.log('🔄 Checking public.users...')
     let userRole = 'student'
     
     try {
       const { data: userData, error: userError } = await supabaseAdmin
         .from('users')
-        .select('role')
+        .select('role, id, email')
         .eq('id', data.user.id)
         .maybeSingle()
 
       if (userError) {
-        console.error('User fetch error:', userError.message)
+        console.error('❌ User fetch error:', userError.message)
       }
 
       if (userData) {
+        console.log('✅ User found in public.users:', userData)
         userRole = userData.role || 'student'
-        console.log('✅ User role from DB:', userRole)
       } else {
-        // Create user if doesn't exist
-        console.log('⚠️ Creating user in public.users...')
+        console.log('⚠️ User NOT in public.users, creating...')
         const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
         const stream = data.user.user_metadata?.stream || 'Not Set'
         
@@ -150,19 +159,20 @@ export async function signIn(formData) {
           })
 
         if (insertError) {
-          console.error('Insert error:', insertError.message)
+          console.error('❌ Insert error:', insertError.message)
         } else {
           console.log('✅ User created in public.users')
         }
         userRole = 'student'
       }
     } catch (err) {
-      console.error('User check error:', err)
+      console.error('❌ User check error:', err)
     }
 
     // ✅ Step 3: Check role
+    console.log('🔄 Checking role... Expected:', role, 'Actual:', userRole)
     if (role !== userRole) {
-      console.error('❌ Role mismatch:', { expected: role, actual: userRole })
+      console.error('❌ Role mismatch!')
       await supabaseServer.auth.signOut()
       return { error: 'Unauthorized role access' }
     }
@@ -173,16 +183,20 @@ export async function signIn(formData) {
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('id', data.user.id)
+      console.log('✅ Last login updated')
     } catch (updateErr) {
       console.error('Update error:', updateErr)
     }
 
-    console.log('✅ Login successful! Redirecting...')
+    console.log('✅ ✅ ✅ LOGIN SUCCESSFUL! Redirecting...')
     revalidatePath('/')
     redirect(role === 'admin' ? '/admin' : '/student')
     
   } catch (error) {
-    console.error('❌ SignIn error:', error)
+    if (error?.digest?.includes('NEXT_REDIRECT')) {
+      throw error
+    }
+    console.error('❌ Login error:', error)
     return { error: 'Login failed. Please try again.' }
   }
 }
