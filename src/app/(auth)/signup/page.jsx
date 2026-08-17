@@ -11,64 +11,38 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState(false)
   const [selectedLevel, setSelectedLevel] = useState('')
   const [selectedStream, setSelectedStream] = useState('')
-  const [selectedSubjects, setSelectedSubjects] = useState([])
 
   // ✅ All Streams with their Core Subjects (Auto-assign)
   const streamData = {
     'Biological Science': {
       icon: '🧬',
-      coreSubjects: ['Biology', 'Chemistry', 'Physics'],
-      optionalSubjects: ['Agricultural Science'],
-      autoAssign: true
+      coreSubjects: ['Biology', 'Chemistry', 'Physics']
     },
     'Physical Science': {
       icon: '⚛️',
-      coreSubjects: ['Combined Mathematics', 'Physics', 'Chemistry'],
-      optionalSubjects: ['ICT'],
-      autoAssign: true
+      coreSubjects: ['Combined Mathematics', 'Physics', 'Chemistry']
     },
     'Technology': {
       icon: '💻',
-      coreSubjects: ['Science for Technology', 'Engineering Technology'],
-      optionalSubjects: ['Bio-Systems Technology', 'ICT', 'Agricultural Science'],
-      autoAssign: true
+      coreSubjects: ['Science for Technology', 'Engineering Technology']
     },
     'Commerce': {
       icon: '📊',
-      coreSubjects: ['Accounting', 'Business Studies', 'Economics'],
-      optionalSubjects: ['ICT', 'Business Statistics'],
-      autoAssign: true
+      coreSubjects: ['Accounting', 'Business Studies', 'Economics']
     },
     'Arts': {
       icon: '🎨',
-      coreSubjects: ['Logic', 'Economics', 'Geography'],
-      optionalSubjects: ['History', 'Sinhala', 'Tamil', 'English', 'ICT', 'CMS', 'Dancing', 'Music', 'Drama', 'Art'],
-      autoAssign: true
+      coreSubjects: ['Logic', 'Economics', 'Geography']
     }
   }
-
-  const olStreams = ['General']
 
   const handleLevelChange = (level) => {
     setSelectedLevel(level)
     setSelectedStream('')
-    setSelectedSubjects([])
   }
 
   const handleStreamSelect = (stream) => {
     setSelectedStream(stream)
-    // ✅ Auto-assign core subjects for ALL streams!
-    if (streamData[stream]) {
-      setSelectedSubjects(streamData[stream].coreSubjects)
-    }
-  }
-
-  const toggleSubject = (subject) => {
-    if (selectedSubjects.includes(subject)) {
-      setSelectedSubjects(selectedSubjects.filter(s => s !== subject))
-    } else if (selectedSubjects.length < 4) {
-      setSelectedSubjects([...selectedSubjects, subject])
-    }
   }
 
   async function handleSubmit(event) {
@@ -77,14 +51,21 @@ export default function SignUpPage() {
     
     const level = formData.get('level')
     let stream = formData.get('stream')
-    const subjects = formData.get('subjects')
+    let subjects = formData.get('subjects') || ''
     
     if (level === 'O/L') {
       stream = 'O/L - General'
-    } else {
+      subjects = 'O/L Subjects'
+    } else if (level === 'A/L' && stream) {
+      const streamDataObj = streamData[stream]
+      if (streamDataObj) {
+        subjects = streamDataObj.coreSubjects.join(', ')
+      }
       stream = `${level} - ${stream}`
     }
     
+    // Add level to form data
+    formData.append('level', level)
     formData.append('stream', stream)
     formData.append('subjects', subjects)
     
@@ -97,10 +78,7 @@ export default function SignUpPage() {
     }
   }
 
-  // Get current stream data
   const currentStream = selectedStream ? streamData[selectedStream] : null
-  const allSubjects = currentStream ? [...currentStream.coreSubjects, ...currentStream.optionalSubjects] : []
-  const isCoreSubject = (subject) => currentStream?.coreSubjects?.includes(subject)
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
@@ -255,7 +233,7 @@ export default function SignUpPage() {
               </motion.div>
             )}
 
-            {/* ✅ Subjects Display - Auto-assigned for ALL streams! */}
+            {/* Core Subjects Display - A/L */}
             {selectedLevel === 'A/L' && selectedStream && currentStream && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -265,7 +243,7 @@ export default function SignUpPage() {
               >
                 <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
-                  Core Subjects ({currentStream.coreSubjects.join(', ')})
+                  Core Subjects
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {currentStream.coreSubjects.map((subject) => (
@@ -275,7 +253,7 @@ export default function SignUpPage() {
                   ))}
                 </div>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-                  ✅ These subjects will be auto-assigned to your profile
+                  ✅ These subjects will be auto-assigned
                 </p>
                 <input type="hidden" name="subjects" value={currentStream.coreSubjects.join(', ')} />
               </motion.div>

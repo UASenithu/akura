@@ -22,9 +22,12 @@ export async function signUp(formData) {
   const fullName = formData.get('fullName')
   const stream = formData.get('stream')
   const role = formData.get('role') || 'student'
+  const level = formData.get('level') || 'A/L'
+  const subjects = formData.get('subjects') || ''
+
+  console.log('📝 SignUp attempt:', { email, fullName, stream, level, subjects })
 
   try {
-    // 1. Create user in auth
     const { data, error } = await supabaseServer.auth.signUp({
       email,
       password,
@@ -32,13 +35,15 @@ export async function signUp(formData) {
         data: {
           full_name: fullName,
           stream: stream,
-          role: role
+          level: level,
+          role: role,
+          subjects: subjects
         }
       }
     })
 
     if (error) {
-      console.error('SignUp error:', error.message)
+      console.error('❌ SignUp error:', error.message)
       return { error: error.message }
     }
 
@@ -46,7 +51,9 @@ export async function signUp(formData) {
       return { error: 'Failed to create account' }
     }
 
-    // 2. Insert into public.users
+    console.log('✅ User created in auth:', data.user.id)
+
+    // Insert into public.users
     const { error: insertError } = await supabaseAdmin
       .from('users')
       .upsert({
@@ -54,36 +61,38 @@ export async function signUp(formData) {
         full_name: fullName,
         email: email,
         stream: stream,
+        level: level,
+        subjects: subjects,
         role: role,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
 
     if (insertError) {
-      console.error('Insert error:', insertError.message)
+      console.error('❌ Insert error:', insertError.message)
+    } else {
+      console.log('✅ User inserted into public.users')
     }
 
-    // ✅ 3. Auto-login after signup (මේක තමයි වැදගත්!)
+    // Auto-login
     const { data: loginData, error: loginError } = await supabaseServer.auth.signInWithPassword({
       email,
       password,
     })
 
     if (loginError) {
-      console.error('Auto-login error:', loginError.message)
-      // If auto-login fails, redirect to login page
+      console.error('❌ Auto-login error:', loginError.message)
       redirect('/login')
     }
 
-    console.log('✅ Signup and auto-login successful!')
-
+    console.log('✅ Auto-login successful!')
     revalidatePath('/')
     redirect(role === 'admin' ? '/admin' : '/student')
   } catch (error) {
     if (error?.digest?.includes('NEXT_REDIRECT')) {
       throw error
     }
-    console.error('SignUp error:', error)
+    console.error('❌ SignUp error:', error)
     return { error: error.message }
   }
 }
@@ -93,7 +102,9 @@ export async function signIn(formData) {
   const password = formData.get('password')
   const role = formData.get('role')
 
-  console.log('🔑 Login attempt:', { email, role })
+  console.log('🔑 ===== LOGIN ATTEMPT =====')
+  console.log('📧 Email:', email)
+  console.log('👤 Role:', role)
 
   try {
     const { data, error } = await supabaseServer.auth.signInWithPassword({
@@ -102,7 +113,7 @@ export async function signIn(formData) {
     })
 
     if (error) {
-      console.error('❌ Auth error:', error.message)
+      console.error('❌ AUTH ERROR:', error.message)
       return { error: error.message }
     }
 
@@ -112,37 +123,48 @@ export async function signIn(formData) {
 
     console.log('✅ User authenticated:', data.user.email)
 
-    // Get or create user in public.users
+    // Get user level from metadata
+    const userLevel = data.user.user_metadata?.level || 'A/L'
+    console.log('📊 User Level:', userLevel)
+
+    // Check public.users
     let userRole = 'student'
     
-    const { data: userData } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', data.user.id)
-      .maybeSingle()
-
-    if (userData) {
-      userRole = userData.role || 'student'
-    } else {
-      // Create user if missing
-      const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
-      const stream = data.user.user_metadata?.stream || 'Not Set'
-      
-      await supabaseAdmin
+    try {
+      const { data: userData } = await supabaseAdmin
         .from('users')
-        .upsert({
-          id: data.user.id,
-          full_name: fullName,
-          email: data.user.email,
-          stream: stream,
-          role: 'student',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-      userRole = 'student'
+        .select('role')
+        .eq('id', data.user.id)
+        .maybeSingle()
+
+      if (userData) {
+        userRole = userData.role || 'student'
+      } else {
+        // Create user if missing
+        const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
+        const stream = data.user.user_metadata?.stream || 'Not Set'
+        const level = data.user.user_metadata?.level || 'A/L'
+        const subjects = data.user.user_metadata?.subjects || ''
+        
+        await supabaseAdmin
+          .from('users')
+          .upsert({
+            id: data.user.id,
+            full_name: fullName,
+            email: data.user.email,
+            stream: stream,
+            level: level,
+            subjects: subjects,
+            role: 'student',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+        userRole = 'student'
+      }
+    } catch (err) {
+      console.error('User check error:', err)
     }
 
-    // Check role
     if (role !== userRole) {
       await supabaseServer.auth.signOut()
       return { error: 'Unauthorized role access' }
@@ -154,9 +176,17 @@ export async function signIn(formData) {
       .update({ last_login: new Date().toISOString() })
       .eq('id', data.user.id)
 
-    console.log('✅ Login successful!')
+    console.log('✅ Login successful! Level:', userLevel)
     revalidatePath('/')
-    redirect(role === 'admin' ? '/admin' : '/student')
+    
+    // ✅ Redirect based on level
+    if (role === 'admin') {
+      redirect('/admin')
+    } else if (userLevel === 'O/L') {
+      redirect('/student/ol-dashboard')
+    } else {
+      redirect('/student')  // A/L default
+    }
     
   } catch (error) {
     if (error?.digest?.includes('NEXT_REDIRECT')) {

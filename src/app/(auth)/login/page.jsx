@@ -34,7 +34,6 @@ export default function LoginPage() {
         setError(result.error)
         setIsLoading(false)
       }
-      // If no error, redirect happens in the action
     } catch (err) {
       setError('Something went wrong. Please try again.')
       setIsLoading(false)
@@ -44,7 +43,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
       
-      {/* Animated Background Orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-300 dark:bg-indigo-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-30 animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-300 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
@@ -59,7 +57,6 @@ export default function LoginPage() {
       >
         <div className="glass rounded-3xl shadow-2xl p-8 border border-white/20 dark:border-white/5">
           
-          {/* Logo */}
           <motion.div 
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
@@ -81,7 +78,6 @@ export default function LoginPage() {
             </p>
           </motion.div>
 
-          {/* Role Toggle */}
           <div className="relative bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 mb-8">
             <div className="relative flex">
               <motion.div
@@ -98,9 +94,7 @@ export default function LoginPage() {
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                <span className="flex items-center justify-center gap-2">
-                  🎓 Student
-                </span>
+                <span className="flex items-center justify-center gap-2">🎓 Student</span>
               </button>
               <button
                 onClick={() => setRole('admin')}
@@ -110,9 +104,7 @@ export default function LoginPage() {
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                <span className="flex items-center justify-center gap-2">
-                  🔐 Admin
-                </span>
+                <span className="flex items-center justify-center gap-2">🔐 Admin</span>
               </button>
             </div>
           </div>
@@ -204,7 +196,6 @@ export default function LoginPage() {
             </p>
           </motion.div>
 
-          {/* Feature Badges */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
