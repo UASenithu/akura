@@ -55,32 +55,6 @@ export default function StudentDashboard() {
     }
   }
 
-  // ✅ Normalize stream names
-  const normalizeStreamName = (name) => {
-    if (!name) return ''
-    
-    // Remove "A/L - " or "O/L - " prefix
-    let cleaned = name.replace(/^(A\/L|O\/L)\s*-\s*/, '')
-    
-    // Trim extra spaces
-    cleaned = cleaned.trim()
-    
-    // Find matching stream
-    const matchingKey = Object.keys(streamSubjects).find(
-      key => key.toLowerCase() === cleaned.toLowerCase()
-    )
-    
-    if (matchingKey) return matchingKey
-    
-    // Try partial match
-    const partialMatch = Object.keys(streamSubjects).find(
-      key => cleaned.toLowerCase().includes(key.toLowerCase()) || 
-             key.toLowerCase().includes(cleaned.toLowerCase())
-    )
-    
-    return partialMatch || cleaned
-  }
-
   useEffect(() => {
     async function fetchData() {
       try {
@@ -91,22 +65,44 @@ export default function StudentDashboard() {
           await updateDailyStreak(user.id)
         }
 
-        // ✅ Get user's stream from metadata
-        const rawStream = user?.user_metadata?.stream || ''
-        console.log('🔍 Raw stream:', rawStream)
+        // ✅ Get user's stream directly from metadata
+        const userStreamFromMeta = user?.user_metadata?.stream || ''
+        console.log('🔍 Raw stream from metadata:', userStreamFromMeta)
         
-        // ✅ Normalize the stream name
-        const normalizedStream = normalizeStreamName(rawStream)
-        console.log('🔍 Normalized stream:', normalizedStream)
+        // ✅ Check if stream exists in streamSubjects
+        let matchedStream = ''
         
-        setUserStream(normalizedStream)
-
-        // ✅ Get subjects for the normalized stream
-        if (normalizedStream && streamSubjects[normalizedStream]) {
-          setUserSubjects(streamSubjects[normalizedStream].subjects)
-          console.log('📚 Subjects:', streamSubjects[normalizedStream].subjects)
+        // First, try exact match
+        if (streamSubjects[userStreamFromMeta]) {
+          matchedStream = userStreamFromMeta
         } else {
-          console.log('⚠️ No match found for:', normalizedStream)
+          // Try case-insensitive match
+          const matchKey = Object.keys(streamSubjects).find(
+            key => key.toLowerCase() === userStreamFromMeta.toLowerCase()
+          )
+          if (matchKey) {
+            matchedStream = matchKey
+          } else {
+            // Try partial match
+            const partialMatch = Object.keys(streamSubjects).find(
+              key => userStreamFromMeta.toLowerCase().includes(key.toLowerCase()) || 
+                     key.toLowerCase().includes(userStreamFromMeta.toLowerCase())
+            )
+            if (partialMatch) {
+              matchedStream = partialMatch
+            }
+          }
+        }
+        
+        console.log('✅ Matched stream:', matchedStream)
+        setUserStream(matchedStream)
+
+        // ✅ Get subjects for the matched stream
+        if (matchedStream && streamSubjects[matchedStream]) {
+          setUserSubjects(streamSubjects[matchedStream].subjects)
+          console.log('📚 Subjects:', streamSubjects[matchedStream].subjects)
+        } else {
+          console.log('⚠️ No match found for:', userStreamFromMeta)
           setUserSubjects([])
         }
 
