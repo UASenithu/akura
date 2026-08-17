@@ -26,7 +26,7 @@ export default function StudentDashboard() {
     badges: []
   })
 
-  // ✅ A/L Stream Subjects Mapping
+  // ✅ A/L Stream Subjects Mapping - EXACT MATCH with Database
   const streamSubjects = {
     'Biological Science': {
       icon: '🧬',
@@ -52,6 +52,12 @@ export default function StudentDashboard() {
       icon: '🎨',
       subjects: ['Logic', 'Economics', 'Geography', 'Political Science', 'History', 'Sinhala', 'Tamil', 'English', 'French', 'Japanese', 'Chinese', 'Music', 'Dance', 'Drama', 'Art', 'ICT', 'Media Studies'],
       description: 'Law, Humanities & Social Sciences fields'
+    },
+    // ✅ Add "Biology Science" as alias for "Biological Science"
+    'Biology Science': {
+      icon: '🧬',
+      subjects: ['Biology', 'Chemistry', 'Physics', 'Agricultural Science'],
+      description: 'Medical, Health & Agricultural fields'
     }
   }
 
@@ -65,28 +71,28 @@ export default function StudentDashboard() {
           await updateDailyStreak(user.id)
         }
 
-        // ✅ Get user's stream directly from metadata
-        const userStreamFromMeta = user?.user_metadata?.stream || ''
-        console.log('🔍 Raw stream from metadata:', userStreamFromMeta)
+        // ✅ Get user's stream from metadata
+        const rawStream = user?.user_metadata?.stream || ''
+        console.log('🔍 Raw stream from metadata:', rawStream)
         
-        // ✅ Check if stream exists in streamSubjects
+        // ✅ Check if stream exists in streamSubjects (including aliases)
         let matchedStream = ''
         
         // First, try exact match
-        if (streamSubjects[userStreamFromMeta]) {
-          matchedStream = userStreamFromMeta
+        if (streamSubjects[rawStream]) {
+          matchedStream = rawStream
         } else {
           // Try case-insensitive match
           const matchKey = Object.keys(streamSubjects).find(
-            key => key.toLowerCase() === userStreamFromMeta.toLowerCase()
+            key => key.toLowerCase() === rawStream.toLowerCase()
           )
           if (matchKey) {
             matchedStream = matchKey
           } else {
             // Try partial match
             const partialMatch = Object.keys(streamSubjects).find(
-              key => userStreamFromMeta.toLowerCase().includes(key.toLowerCase()) || 
-                     key.toLowerCase().includes(userStreamFromMeta.toLowerCase())
+              key => rawStream.toLowerCase().includes(key.toLowerCase()) || 
+                     key.toLowerCase().includes(rawStream.toLowerCase())
             )
             if (partialMatch) {
               matchedStream = partialMatch
@@ -102,7 +108,7 @@ export default function StudentDashboard() {
           setUserSubjects(streamSubjects[matchedStream].subjects)
           console.log('📚 Subjects:', streamSubjects[matchedStream].subjects)
         } else {
-          console.log('⚠️ No match found for:', userStreamFromMeta)
+          console.log('⚠️ No match found for:', rawStream)
           setUserSubjects([])
         }
 
